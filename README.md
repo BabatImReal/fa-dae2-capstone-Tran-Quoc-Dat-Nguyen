@@ -21,13 +21,27 @@ project/
 
 ## Data Sources
 
-### Real-Time Data Source: Stripe API
-Stripe API is a widely used payment processing platform that provides real-time access to transaction, customer, and payment data via a robust RESTful API. In this project, Stripe API will be used to collect up-to-date financial transaction data for analysis and integration into the data pipeline.
+### Real-Time Data Source: API-NBA (RapidAPI)
+[API-NBA](https://rapidapi.com/api-sports/api/api-nba) provides comprehensive real-time and historical NBA basketball data, including games, teams, players, statistics, and standings. This API enables advanced analytics such as player performance tracking, game outcome prediction, and team comparison. Access is managed via RapidAPI, requiring an API key.
 
-### Batch/Static Data Source: Kaggle Financial Transactions Dataset
-This project also utilizes the [Kaggle Transactions Fraud Dataset](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets), which combines transaction records, customer information, and card data from a banking institution, spanning the 2010s decade. The dataset is designed for multiple analytical purposes, including synthetic fraud detection, customer behavior analysis, and expense forecasting.
+### Batch/Static Data Source: Kaggle Basketball Dataset
+This project also utilizes the [Kaggle Basketball Dataset](https://www.kaggle.com/datasets/wyattowalsh/basketball), which contains extensive basketball statistics, player information, and game records. The dataset is suitable for historical analysis, player and team profiling, and machine learning applications in sports analytics.
 
 For details on the evaluation and validation of data sources used in this project, see the research notes in [docs/research/data_source_validation.md](docs/research/data_source_validation.md).
+
+## Data Source Alternatives & Fallbacks
+
+To ensure robustness and continuity in your data pipeline, the following alternatives are implemented:
+
+### Real-Time Data Source (API) Fallback
+- **Primary:** Twelve Data API (real-time financial transactions)
+- **Fallback:** [JSONPlaceholder](https://jsonplaceholder.typicode.com/)
+  If the Twelve Data API is unavailable or rate-limited, the pipeline will automatically switch to JSONPlaceholder, a free online REST API for testing and prototyping, to simulate API responses and maintain workflow continuity.
+
+### Batch/Static Data Source Fallback
+- **Primary:** [Kaggle Transactions Fraud Dataset](https://www.kaggle.com/datasets/computingvictor/transactions-fraud-datasets)
+- **Fallback:** Faker-generated synthetic data
+  If the Kaggle dataset is unavailable or fails validation, the pipeline will use the `fake_data_generator.py` script to generate realistic synthetic datasets using the Faker library, ensuring that downstream processes can continue without interruption.
 
 ## Implemented Features
 
