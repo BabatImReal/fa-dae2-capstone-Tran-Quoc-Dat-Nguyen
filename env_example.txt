@@ -1,0 +1,9 @@
+# API configuration
+API_KEY=your_api_key_here
+API_URL=https://jsonplaceholder.typicode.com/users
+MAX_RECORDS=100
+BATCH_SIZE=10
+MAX_RETRIES=3
+
+# Logging configuration
+LOG_LEVEL=INFO
