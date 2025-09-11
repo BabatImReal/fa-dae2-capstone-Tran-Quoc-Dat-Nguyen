@@ -6,7 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "faker>=37.6.0",
+    "flask>=3.1.2",
     "kagglehub>=0.3.13",
+    "openaq>=0.4.0",
+    "polars>=1.33.0",
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
     "stripe>=12.5.1",

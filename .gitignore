@@ -1,28 +1,42 @@
-# Data files - ignore all generated data
-*.json
-*.csv
-
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Data files
+*.csv
+*.json
+*.parquet
+*.avro
+data/raw/
+data/processed/
+data/models/
 
 # Environment variables
 .env
+.env.local
+.env.production
 
 # Logs
 *.log
+logs/
 
-# UV/Python virtual environment
-.venv/
-venv/
-
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
+
+# Docker
+.dockerignore

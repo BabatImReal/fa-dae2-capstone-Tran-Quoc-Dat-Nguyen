@@ -21,8 +21,8 @@ project/
 
 ## Data Sources
 
-### Real-Time Data Source: API-NBA (RapidAPI)
-[API-NBA](https://rapidapi.com/api-sports/api/api-nba) provides comprehensive real-time and historical NBA basketball data, including games, teams, players, statistics, and standings. This API enables advanced analytics such as player performance tracking, game outcome prediction, and team comparison. Access is managed via RapidAPI, requiring an API key.
+### Real-Time Data Source: OpenAQ API
+[OpenAQ](https://docs.openaq.org/) provides open, real-time, and historical air quality data from thousands of locations worldwide. The API enables access to measurements of pollutants such as PM2.5, PM10, NO2, O3, and more, supporting environmental analytics, public health research, and data-driven policy making. No API key is required for basic usage.
 
 ### Batch/Static Data Source: Kaggle Basketball Dataset
 This project also utilizes the [Kaggle Basketball Dataset](https://www.kaggle.com/datasets/wyattowalsh/basketball), which contains extensive basketball statistics, player information, and game records. The dataset is suitable for historical analysis, player and team profiling, and machine learning applications in sports analytics.
