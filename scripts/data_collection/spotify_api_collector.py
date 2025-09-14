@@ -68,17 +68,34 @@ def save_data(data: list, filename: str) -> 'Path':
         json.dump(data, f, ensure_ascii=False, indent=2)
     return file_path
 
+def get_artists(token, artist_ids):
+    """
+    Get information for multiple artists by their Spotify IDs.
+    :param token: Spotify API token
+    :param artist_ids: List of artist IDs (max 50)
+    :return: List of artist objects
+    """
+    url = "https://api.spotify.com/v1/artists"
+    headers = get_auth_header(token)
+    ids_param = ",".join(artist_ids)
+    params = {"ids": ids_param}
+    result = requests.get(url, headers=headers, params=params)
+    json_result = result.json()
+    return json_result["artists"]
+
+
 token = get_token()
-result = search_for_artist(token, "Noo")
-artist_id = result["id"]
-songs = get_songs_by_artist(token, artist_id)
+# result = search_for_artist(token, "Noo")
+# artist_id = result["id"]
+# songs = get_songs_by_artist(token, artist_id)
 
-for idx, song in enumerate(songs):
-    print(f"{idx+1}. {song['name']}")
+# for idx, song in enumerate(songs):
+#     print(f"{idx+1}. {song['name']}")
 
-albums = get_albums_by_artist(token, artist_id)
-for idx, album in enumerate(albums):
-    print(f"{idx+1}. {album['name']}")
+# albums = get_albums_by_artist(token, artist_id)
+# for idx, album in enumerate(albums):
+#     print(f"{idx+1}. {album['name']}")
 
-# Save albums data as JSON
-save_data(albums, f"{result['name']}_albums")
+artist_ids = ["1Xyo4u8uXC1ZmMpatF05PJ", "3TVXtAsR1Inumwj472S9r4"]  # Example IDs
+artists = get_artists(token, artist_ids)
+save_data(artists, "artists_info")

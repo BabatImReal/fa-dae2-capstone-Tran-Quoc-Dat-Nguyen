@@ -1,0 +1,17 @@
+[project]
+name = "m01w02-database-lab"
+version = "0.1.0"
+description = "Database connectivity lab for M01W02 - Docker and PostgreSQL"
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.0.1",
+    "psycopg[binary]~=3.2",
+    "rich>=14.1.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["E402"]

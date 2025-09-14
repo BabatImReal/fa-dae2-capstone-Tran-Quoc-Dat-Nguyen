@@ -43,6 +43,24 @@ class FakeDataGenerator:
             })
         return transactions
 
+    def generate_data_quality(self, count: int = 100) -> List[Dict]:
+        """Generate fake air quality sensor data."""
+        records = []
+        for _ in range(count):
+            records.append({
+                "sensor_id": self.fake.uuid4(),
+                "timestamp": self.fake.date_time_this_year().isoformat(),
+                "pm25": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=500), 2),
+                "pm10": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=600), 2),
+                "co": round(self.fake.pyfloat(left_digits=2, right_digits=2, min_value=0, max_value=50), 2),
+                "no2": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=200), 2),
+                "o3": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=300), 2),
+                "temperature": round(self.fake.pyfloat(left_digits=2, right_digits=2, min_value=-20, max_value=50), 2),
+                "humidity": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=100), 2),
+                "quality_flag": self.fake.random_element(["good", "moderate", "unhealthy", "hazardous"])
+            })
+        return records
+
     def save_data_as_json(self, data: List[Dict], filename: str) -> Path:
         """Save data to JSON file."""
         file_path = self.data_dir / f"{filename}.json"
@@ -69,10 +87,13 @@ def main():
         # Generate different types of data
         users = generator.generate_user_data(100)
         transactions = generator.generate_transaction_data(100)
+        data_quality = generator.generate_data_quality(100)
 
         # Save in different formats
         generator.save_data_as_json(users, "fake_users")
         generator.save_data_as_csv(transactions, "fake_transactions")
+        generator.save_data_as_json(data_quality, "fake_data_quality")
+        generator.save_data_as_csv(data_quality, "fake_data_quality")
 
         print("Fake data generation completed successfully!")
 
