@@ -1,5 +1,5 @@
 services:
-  kafka-postgres:
+  postgres:
     image: postgres:17.4
     container_name: m01w02-postgres
     environment:
@@ -8,24 +8,17 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "5433:5432"
     volumes:
-      - kafka_postgres_data:/var/lib/postgresql/data   # Named volume for data persistence
+      - postgres_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U staging_user -d staging_db"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    networks:
-      - kafka_network
 
 volumes:
-  kafka_postgres_data:
-    driver: local 
-
-networks:
-  kafka_network:
-    external: true
-    name: fa-dae2-capstone_kafka_network
+  postgres_data:
+    driver: local

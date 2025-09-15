@@ -13,10 +13,10 @@ load_dotenv()
 def get_connection_params():
     """Get database connection parameters from environment variables."""
     return {
-        "host": os.getenv("POSTGRES_HOST"),
-        "port": os.getenv("POSTGRES_PORT"),
-        "dbname": os.getenv("POSTGRES_DB"),
-        "user": os.getenv("POSTGRES_USER"),
+        "host": os.getenv("POSTGRES_HOST", "localhost"),
+        "port": os.getenv("POSTGRES_PORT", "5433"),
+        "dbname": os.getenv("POSTGRES_DB", "staging_db"),
+        "user": os.getenv("POSTGRES_USER", "staging_user"),
         "password": os.getenv("POSTGRES_PASSWORD"),
     }
 
@@ -24,7 +24,6 @@ def test_connection():
     """Test database connection and return True if successful."""
     try:
         params = get_connection_params()
-        print(params)
         print(f"🔌 Connecting to PostgreSQL at {params['host']}:{params['port']}...")
 
         with psycopg.connect(**params) as conn:
