@@ -13,6 +13,6 @@ CREATE TABLE IF NOT EXISTS staging.raw_data (
 );
 
 -- Grant permissions (user already exists from Docker environment)
-GRANT ALL PRIVILEGES ON SCHEMA staging TO staging_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA staging TO staging_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA staging TO staging_user;
+GRANT ALL PRIVILEGES ON SCHEMA staging TO postgres;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA staging TO postgres;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA staging TO postgres;
