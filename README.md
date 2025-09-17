@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-This capstone project builds a comprehensive **AI Music Recommender Agent** that provides personalized music recommendations using modern data engineering practices. The system implements an end-to-end ELT (Extract, Load, Transform) pipeline that collects music data from multiple sources, processes it through cloud infrastructure, and serves AI-powered recommendations.
+This capstone project is a data engineering initiative to build a robust pipeline for music data, enabling personalized music recommendations through modern ELT (Extract, Load, Transform) practices. The system integrates music data from multiple sources, processes it via cloud infrastructure, and supports AI-powered analytics and recommendations.
 
 ### 🎼 What We're Building
 - **AI-powered music recommendation engine** using collaborative filtering and content-based algorithms
@@ -40,18 +40,21 @@ fa-dae2-capstone/
 
 ### 🏗️ Architecture Documentation (`docs/architecture/`)
 
-#### [`architecture.md`](docs/architecture.md)
+#### [`data-engineering-fundamentals.md`](docs/architecture/data-engineering-fundamentals.md)
+**NEW**: Foundational concepts for modern data systems, answering the five core questions: Where does data come from? How does it move? Where do we store it? How do we process it? How do we use it?
+
+#### [`architecture.md`](docs/architecture/architecture.md)
 Complete system architecture overview with 8-layer design, from data sources to AI recommendations. Includes visual Mermaid diagrams and component relationships.
 
-#### [`DATA_FLOW.md`](docs/DATA_FLOW.md)
+#### [`data-flow.md`](docs/architecture/data-flow.md)
 Simple ELT (Extract, Load, Transform) data flow documentation explaining the journey from music APIs to AI recommendations, including technologies and processes at each stage.
 
-#### [`TECHNOLOGY_CHOICES.md`](docs/architecture/TECHNOLOGY_CHOICES.md)
+#### [`technology-decision.md`](docs/architecture/technology-decision.md)
 Architecture Decision Records (ADRs) documenting technology choices with rationale:
-- **PostgreSQL** for local development
-- **Snowflake** for cloud data warehouse
+- **PostgreSQL** for local development (OLTP)
+- **Snowflake** for cloud data warehouse (OLAP)
 - **Python 3.10+** for data processing
-- **dbt** for data transformation
+- **dbt** for data transformation (ELT)
 - **Apache Airflow** for orchestration
 
 ### 🔍 Data Source Documentation (`docs/data-source/`)
@@ -154,18 +157,29 @@ Comprehensive project specification including scope, success metrics, implementa
 
 ## 🏗️ Architecture Highlights
 
-### 🔄 ELT Pipeline
+### 🔄 ELT Pipeline (Based on Data Engineering Fundamentals)
+Answering the five core questions of data systems:
 ```
-Music APIs → Python Collectors → PostgreSQL (staging) → Snowflake (cloud) → dbt (transform) → AI Models
+1. Sources: Music APIs → 
+2. Ingestion: Python Collectors → 
+3. Storage: PostgreSQL (staging) → Snowflake (cloud) → 
+4. Transform: dbt (transform) → 
+5. Analysis: AI Models
 ```
 
 ### 🛠️ Technology Stack
 - **Languages**: Python 3.10+, SQL
-- **Databases**: PostgreSQL (local), Snowflake (cloud)
+- **Databases**: PostgreSQL (OLTP staging), Snowflake (OLAP analytics)
 - **Processing**: dbt, pandas, polars
 - **Orchestration**: Apache Airflow
 - **APIs**: Last.fm, Spotify, Kaggle
 - **Infrastructure**: Docker, UV package manager
+
+### 🎯 Design Patterns
+- **ELT over ETL**: Load raw data first, transform in warehouse
+- **OLTP vs OLAP**: PostgreSQL for staging, Snowflake for analytics
+- **Batch + Real-Time**: Daily training, real-time inference
+- **Multi-Source**: Redundancy with fallback mechanisms
 
 ## 📈 Development Roadmap
 

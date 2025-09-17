@@ -2,7 +2,9 @@
 
 ## 📋 Overview
 
-This document contains Architecture Decision Records for our **AI Music Recommender Agent** capstone project. Each decision follows a simple template to document the rationale behind our technology choices.
+This document contains Architecture Decision Records for our **AI Music Recommender Agent** capstone project. Each decision follows our ADR template and aligns with [data engineering fundamentals](data-engineering-fundamentals.md) - answering the five core questions of where data comes from, how it moves, where it's stored, how it's processed, and how it's used.
+
+> **📚 Foundation**: Our technology choices support the fundamental data flow: Sources → Ingestion → Storage → Transformation → Analysis.
 
 ---
 
@@ -12,26 +14,28 @@ This document contains Architecture Decision Records for our **AI Music Recommen
 **Status**: Approved
 
 **Context**:  
-We need a local database for development and staging of music data before sending to cloud. The database must handle JSON data from music APIs (Last.fm, Spotify) and support rapid development iterations.
+We need a local database for development and staging of music data before sending to cloud. The database must handle JSON data from music APIs (Last.fm, Spotify) and support rapid development iterations. This addresses the "Where do we store it?" question for local development.
 
 **Decision**:  
 Use PostgreSQL in Docker containers for local development and staging.
 
-**Rationale**:  
+**Rationale** (OLTP Pattern for Staging):  
+- **ACID Compliance**: Ensures data integrity for music metadata (transactional)
 - **JSON Support**: Native JSON/JSONB types for API responses
-- **ACID Compliance**: Ensures data integrity for music metadata
 - **SQL Ecosystem**: Seamless integration with dbt and Python
 - **Docker Ready**: Consistent environment across team
 - **Production Similarity**: Skills transfer to cloud PostgreSQL services
+- **Fast Transactions**: Perfect for staging and validation workflows
 
 **Alternatives Considered**:  
-- **SQLite**: Too limited for complex JSON operations
+- **SQLite**: Too limited for complex JSON operations and concurrent access
 - **MySQL**: Weaker JSON support compared to PostgreSQL
 - **MongoDB**: NoSQL complexity not needed for structured music data
 
 **Consequences**:  
 - ✅ Fast local development and testing
 - ✅ Easy transition to cloud PostgreSQL
+- ✅ OLTP optimized for staging workflows
 - ⚠️ Requires Docker knowledge
 - ⚠️ Additional local resource usage
 
@@ -46,17 +50,18 @@ Store raw Last.fm API responses in JSONB columns, then query with `->` operators
 **Status**: Approved
 
 **Context**:  
-We need a cloud data warehouse that can handle large-scale music data, support ML workloads, and provide cost-effective scaling for our AI recommendation engine.
+We need a cloud data warehouse that can handle large-scale music data, support ML workloads, and provide cost-effective scaling for our AI recommendation engine. This addresses the "Where do we store it?" question for production analytics.
 
 **Decision**:  
 Use Snowflake as our cloud data warehouse with separate RAW and ANALYTICS databases.
 
-**Rationale**:  
-- **Separation of Storage & Compute**: Pay only when processing data
+**Rationale** (OLAP Pattern for Analytics):  
+- **Separation of Storage & Compute**: Pay only when processing data (cost-effective)
 - **VARIANT Data Type**: Perfect for diverse music API responses
-- **Auto-scaling**: Handles varying workloads (daily batch vs. real-time)
+- **Auto-scaling**: Handles varying workloads (daily batch vs. real-time queries)
 - **ML-Ready**: Built-in functions for recommendation algorithms
 - **Time Travel**: Essential for data governance and debugging
+- **OLAP Optimized**: Designed for analytical queries and aggregations
 
 **Alternatives Considered**:  
 - **BigQuery**: Google ecosystem lock-in concerns
@@ -67,6 +72,7 @@ Use Snowflake as our cloud data warehouse with separate RAW and ANALYTICS databa
 - ✅ Excellent performance for music analytics
 - ✅ Cost-effective with auto-scaling
 - ✅ Native JSON handling for APIs
+- ✅ OLAP optimized for BI and ML workloads
 - ⚠️ Vendor-specific SQL extensions
 - ⚠️ Learning curve for Snowflake-specific features
 
@@ -81,17 +87,18 @@ Load raw JSON from music APIs into RAW.MUSIC.TRACKS, then use dbt to transform i
 **Status**: Approved
 
 **Context**:  
-We need a programming language for data collection, processing, and ML model development that can handle music APIs and integrate well with our data stack.
+We need a programming language for data collection, processing, and ML model development that can handle music APIs and integrate well with our data stack. This addresses the "How does it move?" and "How do we process it?" questions.
 
 **Decision**:  
 Use Python 3.10+ as our primary language for all data processing tasks.
 
-**Rationale**:  
-- **Music API Ecosystem**: Rich libraries (spotipy, pylast, requests)
-- **Data Processing**: Mature tools (pandas, polars) for music metadata
-- **ML/AI Libraries**: Best-in-class ecosystem (scikit-learn, tensorflow)
+**Rationale** (Ingestion & Transformation):  
+- **Music API Ecosystem**: Rich libraries (spotipy, pylast, requests) for ingestion
+- **Data Processing**: Mature tools (pandas, polars) for music metadata transformation
+- **ML/AI Libraries**: Best-in-class ecosystem (scikit-learn, tensorflow) for recommendations
 - **Async Support**: Concurrent API calls for better performance
 - **Integration**: Native support for dbt, Airflow, Snowflake
+- **ETL/ELT Support**: Perfect for both extract and transform phases
 
 **Alternatives Considered**:  
 - **Java**: Verbose for data processing, less ML ecosystem
@@ -102,6 +109,7 @@ Use Python 3.10+ as our primary language for all data processing tasks.
 - ✅ Fastest development for music data pipelines
 - ✅ Excellent ML/AI ecosystem
 - ✅ Strong community and documentation
+- ✅ Perfect for both ingestion and transformation
 - ⚠️ Performance limitations for very large datasets
 - ⚠️ GIL limitations for CPU-intensive tasks
 
@@ -116,20 +124,21 @@ Build async API collectors for Last.fm and Spotify, use pandas for data cleaning
 **Status**: Approved
 
 **Context**:  
-We need a tool to transform raw music data into analytics-ready models with proper testing, documentation, and version control.
+We need a tool to transform raw music data into analytics-ready models with proper testing, documentation, and version control. This directly addresses the "How do we process it?" question in our ELT approach.
 
 **Decision**:  
 Use dbt (data build tool) for all data transformations in Snowflake.
 
-**Rationale**:  
-- **SQL-First**: Leverages team's SQL knowledge
+**Rationale** (ELT Transformation Layer):  
+- **SQL-First**: Leverages team's SQL knowledge for transformations
 - **Testing Framework**: Built-in data quality tests
 - **Documentation**: Auto-generated data lineage
-- **Version Control**: Git-based workflow
+- **Version Control**: Git-based workflow for transformation logic
 - **Snowflake Integration**: Native support and optimization
+- **ELT Pattern**: Perfect for transform-in-warehouse approach
 
 **Alternatives Considered**:  
-- **Python ETL**: More complex, harder to maintain
+- **Python ETL**: More complex, harder to maintain, doesn't leverage warehouse
 - **Stored Procedures**: Vendor-specific, limited version control
 - **Airflow Tasks**: Mixing orchestration with transformation
 
@@ -137,6 +146,7 @@ Use dbt (data build tool) for all data transformations in Snowflake.
 - ✅ Clean separation of transformation logic
 - ✅ Excellent testing and documentation
 - ✅ Version-controlled transformations
+- ✅ Optimized for ELT pattern
 - ⚠️ Another tool to learn and maintain
 - ⚠️ SQL-only limitations for complex logic
 
@@ -151,17 +161,18 @@ Create staging models to clean raw music data, then build dimensional models (di
 **Status**: Proposed
 
 **Context**:  
-We need to orchestrate our music data pipeline with scheduling, monitoring, and error handling across multiple systems (APIs, PostgreSQL, Snowflake, dbt).
+We need to orchestrate our music data pipeline with scheduling, monitoring, and error handling across multiple systems (APIs, PostgreSQL, Snowflake, dbt). This addresses the "How does it move?" question for pipeline coordination.
 
 **Decision**:  
 Use Apache Airflow for pipeline orchestration and scheduling.
 
-**Rationale**:  
+**Rationale** (Pipeline Orchestration):  
 - **Python Native**: Fits with our Python-first approach
-- **Rich Operators**: Built-in support for our tech stack
+- **Rich Operators**: Built-in support for our tech stack (Snowflake, dbt, PostgreSQL)
 - **Monitoring**: Web UI for pipeline visibility
 - **Error Handling**: Retry logic and alerting
 - **Industry Standard**: Widely adopted in data engineering
+- **Workflow Management**: Perfect for complex ELT pipeline coordination
 
 **Alternatives Considered**:  
 - **Prefect**: Newer but less mature ecosystem
@@ -172,6 +183,7 @@ Use Apache Airflow for pipeline orchestration and scheduling.
 - ✅ Professional pipeline orchestration
 - ✅ Excellent monitoring and alerting
 - ✅ Strong community and ecosystem
+- ✅ Perfect for coordinating ELT workflows
 - ⚠️ Resource intensive (requires dedicated infrastructure)
 - ⚠️ Complex setup and maintenance
 
@@ -182,15 +194,38 @@ Daily DAG that collects music data from APIs, loads to Snowflake, runs dbt trans
 
 ## Summary
 
-| Technology | Purpose | Status | Key Benefit |
-|------------|---------|--------|-------------|
-| PostgreSQL | Local Development | ✅ Approved | Fast iteration |
-| Snowflake | Cloud Warehouse | ✅ Approved | Scalable analytics |
-| Python 3.10+ | Data Processing | ✅ Approved | Rich ecosystem |
-| dbt | Data Transformation | ✅ Approved | SQL-first approach |
-| Airflow | Orchestration | 🔄 Proposed | Professional pipeline |
+| Technology | Purpose | Status | Key Benefit | Data Engineering Function |
+|------------|---------|--------|-------------|---------------------------|
+| PostgreSQL | Local Development | ✅ Approved | Fast iteration | Staging (OLTP) |
+| Snowflake | Cloud Warehouse | ✅ Approved | Scalable analytics | Storage & Analytics (OLAP) |
+| Python 3.10+ | Data Processing | ✅ Approved | Rich ecosystem | Ingestion & Transformation |
+| dbt | Data Transformation | ✅ Approved | SQL-first approach | Transform (ELT) |
+| Airflow | Orchestration | 🔄 Proposed | Professional pipeline | Orchestration |
 
-This technology stack provides a modern, scalable foundation for our **AI Music Recommender Agent** while emphasizing learning industry-standard tools.
+This technology stack provides a modern, scalable foundation for our **AI Music Recommender Agent** while emphasizing learning industry-standard tools and following proven data engineering patterns.
+
+## 🔄 Supporting the Five Fundamental Questions
+
+### 1. Where does data come from? (Sources)
+- **Music APIs**: Last.fm, Spotify for real-time data
+- **Kaggle Datasets**: Historical music data for training
+
+### 2. How does it move? (Ingestion & Transport)
+- **Python**: API collectors and batch processors
+- **Airflow**: Pipeline orchestration and scheduling
+
+### 3. Where do we store it? (Storage)
+- **PostgreSQL**: Local staging (OLTP)
+- **Snowflake**: Cloud analytics (OLAP)
+
+### 4. How do we process it? (Transformation)
+- **dbt**: SQL-first transformations in warehouse
+- **Python**: Complex processing and ML feature engineering
+
+### 5. How do we use it? (Analysis & Output)
+- **Snowflake ANALYTICS**: Dimensional models for BI
+- **Python ML**: AI recommendation engine
+- **REST APIs**: Real-time recommendation serving
 
 ## 🔄 Supporting Capstone Goals
 

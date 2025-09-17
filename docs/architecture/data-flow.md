@@ -2,7 +2,15 @@
 
 ## 📋 Overview
 
-This document explains the simple **ELT (Extract, Load, Transform)** data flow for our **AI Music Recommender Agent**. We follow a straightforward pattern: get data from sources, load it into storage, then transform it for analytics.
+This document explains the simple **ELT (Extract, Load, Transform)** data flow for our **AI Music Recommender Agent**. We follow the foundational data engineering pattern of answering five key questions:
+
+1. **Where does data come from?** → Music APIs + Datasets
+2. **How does it move?** → Python collectors + orchestration
+3. **Where do we store it?** → PostgreSQL (staging) + Snowflake (analytics)
+4. **How do we process it?** → dbt transformations + SQL
+5. **How do we use it?** → AI recommendations + dashboards
+
+> **📚 Foundation**: This flow implements the core building blocks from [data engineering fundamentals](data-engineering-fundamentals.md).
 
 ## 🌊 Simple ELT Flow
 
@@ -15,7 +23,7 @@ graph LR
     end
     
     subgraph "LOAD 📥"
-        B1[Local PostgreSQL]
+        B1[PostgreSQL Staging]
         B2[Snowflake RAW]
     end
     
@@ -47,34 +55,37 @@ graph LR
 ### Step 1: EXTRACT 📡
 **What**: Get raw music data from various sources
 
-**Sources**:
+**Sources** (Answering: "Where does data come from?"):
 - **Last.fm API**: User listening history, track info
 - **Spotify API**: Song features, artist details  
 - **Kaggle Datasets**: Historical music data
 
 **Tools**: Python API collectors, requests library, kagglehub
+**Pattern**: Multi-source strategy with fallback mechanisms
 
 ### Step 2: LOAD 📥
-**What**: Store raw data without changing it
+**What**: Store raw data without changing it (ELT approach)
 
 **Local Storage** (Development):
-- **PostgreSQL**: For local development and testing
+- **PostgreSQL**: OLTP for local development and testing
 - **JSON Files**: Raw API responses saved as-is
 
 **Cloud Storage** (Production):
-- **Snowflake RAW Database**: All raw data, exactly as received
+- **Snowflake RAW Database**: OLAP for all raw data, exactly as received
 
 **Tools**: PostgreSQL, Snowflake, COPY commands, Python connectors
+**Pattern**: Stage locally, then load to cloud for scalability
 
 ### Step 3: TRANSFORM 🔧
-**What**: Clean and structure data for business use
+**What**: Clean and structure data for business use (Transform in warehouse)
 
 **Transformations**:
 - **Data Cleaning**: Fix missing values, standardize formats
 - **Business Logic**: Calculate metrics, create relationships
-- **Data Modeling**: Create tables for analytics
+- **Data Modeling**: Create dimensional models for analytics
 
 **Tools**: dbt (data build tool), SQL, Jinja templating
+**Pattern**: SQL-first transformations in cloud warehouse
 
 ### Step 4: ANALYTICS 📊
 **What**: Ready-to-use data for AI and reporting
@@ -85,18 +96,26 @@ graph LR
 - **Dashboards**: Data for business reporting
 
 **Tools**: Snowflake, Python ML libraries, BI tools
+**Pattern**: Serve analytics-ready data for consumption
 
 ## 🔄 Complete ELT Pipeline
 
-### Development Flow (Local)
+### Development Flow (Local - OLTP Pattern)
 ```
-API/Kaggle → Python Scripts → PostgreSQL → Validate → Ready for Cloud
+API/Kaggle → Python Scripts → PostgreSQL Staging → Validate → Ready for Cloud
 ```
+**Why PostgreSQL**: Fast transactions, ACID compliance, perfect for staging
 
-### Production Flow (Cloud)
+### Production Flow (Cloud - OLAP Pattern)
 ```
 Raw Data → Snowflake RAW → dbt Transform → Snowflake ANALYTICS → AI Model
 ```
+**Why Snowflake**: Auto-scaling, pay-per-use, optimized for analytics
+
+### Batch vs Real-Time Processing
+- **Batch**: Daily data collection and model training (minutes-hours)
+- **Real-Time**: Live recommendation responses (seconds-ms)
+- **Hybrid**: Best of both - batch learning with real-time inference
 
 ## 📁 Data Storage Structure
 
@@ -118,31 +137,34 @@ ANALYTICS.MUSIC.RECOMMENDATIONS -- AI recommendation results
 
 ## 🔄 Data Flow Process Overview
 
-### 1. Extract Music Data
+### 1. Extract Music Data (Sources)
 **Process**: Collect raw music data from external sources
 **Technologies**: Python API collectors, Kaggle downloaders
 **Output**: Raw JSON files and API responses
+**Design Pattern**: Multi-source strategy with fallback mechanisms
 
-### 2. Load to Databases
-**Process**: Store raw data without modification
+### 2. Load to Databases (Ingestion & Storage)
+**Process**: Store raw data without modification (ELT approach)
 **Technologies**: 
-- **Local**: PostgreSQL (development)
-- **Cloud**: Snowflake (production)
+- **Local (OLTP)**: PostgreSQL for development and staging
+- **Cloud (OLAP)**: Snowflake for production analytics
 **Output**: Raw data tables with original structure
+**Design Pattern**: Local-to-cloud pipeline with validation
 
-### 3. Transform with dbt
+### 3. Transform with dbt (Transformation)
 **Process**: Clean and structure data for business use
-**Technologies**: dbt (data build tool)
+**Technologies**: dbt (data build tool), SQL transformations
 **Activities**: 
-- Remove duplicates
-- Standardize formats
-- Create business logic
-- Build dimensional models
+- Remove duplicates and handle missing values
+- Standardize formats and create business logic
+- Build dimensional models (star schema)
+- Generate ML features
 
-### 4. Analytics Ready Data
+### 4. Analytics Ready Data (Analysis & Output)
 **Process**: Serve clean data for AI and reporting
-**Technologies**: Snowflake ANALYTICS database
-**Output**: Structured tables ready for ML models
+**Technologies**: Snowflake ANALYTICS database, Python ML libraries
+**Output**: Structured tables ready for ML models and dashboards
+**Design Pattern**: Dimensional modeling for analytics consumption
 
 ## ✅ Quality Checks & Monitoring
 
