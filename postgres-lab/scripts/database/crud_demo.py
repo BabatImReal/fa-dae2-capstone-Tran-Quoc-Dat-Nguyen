@@ -14,7 +14,7 @@ def get_connection():
     """Get database connection."""
     params = {
         "host": os.getenv("POSTGRES_HOST", "localhost"),
-        "port": os.getenv("POSTGRES_PORT", "5433"),
+        "port": os.getenv("POSTGRES_PORT", "5432"),
         "dbname": os.getenv("POSTGRES_DB", "staging_db"),
         "user": os.getenv("POSTGRES_USER", "staging_user"),
         "password": os.getenv("POSTGRES_PASSWORD"),
@@ -102,6 +102,38 @@ def demonstrate_crud():
                     print(f"   ✅ Created record {record_id}: {filename}")
 
                 # READ, UPDATE, DELETE operations...
+                # READ - Query all records
+                print("\n📖 Reading all records...")
+                cur.execute(
+                    "SELECT id, data_content, file_name, loaded_at FROM staging.raw_data ORDER BY id"
+                )
+                records = cur.fetchall()
+
+                for record in records:
+                    print(
+                        f"   📋 ID: {record[0]}, File: {record[2]}, Content: {record[1][:30]}..."
+                    )
+
+                # UPDATE - Modify a record
+                print("\n✏️ Updating first record...")
+                cur.execute(
+                    "UPDATE staging.raw_data SET data_content = %s WHERE id = %s",
+                    ("Updated JSON data with new content", records[0][0]),
+                )
+                print(f"   ✅ Updated record {records[0][0]}")
+
+                # DELETE - Remove last record
+                print("\n🗑️ Deleting last record...")
+                cur.execute(
+                    "DELETE FROM staging.raw_data WHERE id = %s", (records[-1][0],)
+                )
+                print(f"   ✅ Deleted record {records[-1][0]}")
+
+                # Final count
+                cur.execute("SELECT COUNT(*) FROM staging.raw_data")
+                final_count = cur.fetchone()[0]
+                print(f"\n📊 Final record count: {final_count}")
+
                 return True
     except Exception as e:
         print(f"❌ CRUD operations failed: {str(e)}")

@@ -14,7 +14,7 @@ def get_connection_params():
     """Get database connection parameters from environment variables."""
     return {
         "host": os.getenv("POSTGRES_HOST", "localhost"),
-        "port": os.getenv("POSTGRES_PORT", "5433"),
+        "port": os.getenv("POSTGRES_PORT", "5432"),
         "dbname": os.getenv("POSTGRES_DB", "staging_db"),
         "user": os.getenv("POSTGRES_USER", "staging_user"),
         "password": os.getenv("POSTGRES_PASSWORD"),
