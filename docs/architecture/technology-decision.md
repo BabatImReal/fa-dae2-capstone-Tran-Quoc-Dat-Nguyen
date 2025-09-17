@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document contains Architecture Decision Records for our **AI Music Recommender Agent** capstone project. Each decision follows our ADR template and aligns with [data engineering fundamentals](data-engineering-fundamentals.md) - answering the five core questions of where data comes from, how it moves, where it's stored, how it's processed, and how it's used.
+This document contains Architecture Decision Records for our **Music Pipeline** capstone project. Each decision follows our ADR template and aligns with [data engineering fundamentals](data-engineering-fundamentals.md) - answering the five core questions of where data comes from, how it moves, where it's stored, how it's processed, and how it's used.
 
 > **📚 Foundation**: Our technology choices support the fundamental data flow: Sources → Ingestion → Storage → Transformation → Analysis.
 
@@ -10,7 +10,7 @@ This document contains Architecture Decision Records for our **AI Music Recommen
 
 ## Decision: PostgreSQL for Local Development
 
-**Date**: 2024-01-15  
+**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -46,7 +46,7 @@ Store raw Last.fm API responses in JSONB columns, then query with `->` operators
 
 ## Decision: Snowflake for Cloud Data Warehouse
 
-**Date**: 2024-01-15  
+**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -83,7 +83,7 @@ Load raw JSON from music APIs into RAW.MUSIC.TRACKS, then use dbt to transform i
 
 ## Decision: Python 3.10+ for Data Processing
 
-**Date**: 2024-01-15  
+**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -120,7 +120,7 @@ Build async API collectors for Last.fm and Spotify, use pandas for data cleaning
 
 ## Decision: dbt for Data Transformation
 
-**Date**: 2024-01-15  
+**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -157,7 +157,7 @@ Create staging models to clean raw music data, then build dimensional models (di
 
 ## Decision: Apache Airflow for Orchestration
 
-**Date**: 2024-01-15  
+**Date**: 2024-09-17 
 **Status**: Proposed
 
 **Context**:  
@@ -202,7 +202,7 @@ Daily DAG that collects music data from APIs, loads to Snowflake, runs dbt trans
 | dbt | Data Transformation | ✅ Approved | SQL-first approach | Transform (ELT) |
 | Airflow | Orchestration | 🔄 Proposed | Professional pipeline | Orchestration |
 
-This technology stack provides a modern, scalable foundation for our **AI Music Recommender Agent** while emphasizing learning industry-standard tools and following proven data engineering patterns.
+This technology stack provides a modern, scalable foundation for our **Music Pipeline** while emphasizing learning industry-standard tools and following proven data engineering patterns.
 
 ## 🔄 Supporting the Five Fundamental Questions
 
@@ -229,7 +229,7 @@ This technology stack provides a modern, scalable foundation for our **AI Music 
 
 ## 🔄 Supporting Capstone Goals
 
-### 1. AI Music Recommender Agent
+### 1. Music Pipeline
 - **PostgreSQL**: Fast local prototyping of recommendation algorithms
 - **Snowflake**: Scalable training data storage for ML models
 - **Python**: Rich ML ecosystem for building recommendation engines
@@ -275,17 +275,6 @@ This technology stack provides a modern, scalable foundation for our **AI Music 
 - Memory Efficiency: Polars for large datasets
 ```
 
-## 🎯 Decision Matrix
-
-| Requirement | PostgreSQL | Snowflake | Python | Alternative | Score |
-|-------------|------------|-----------|--------|-------------|-------|
-| Local Development | ✅ Excellent | ❌ Overkill | ✅ Excellent | SQLite: Limited | 9/10 |
-| Cloud Scalability | ⚠️ Manual scaling | ✅ Auto-scale | ✅ Cloud-native | BigQuery: Vendor lock | 9/10 |
-| Music API Integration | ✅ JSON support | ✅ VARIANT type | ✅ Rich ecosystem | Java: Verbose | 10/10 |
-| ML/AI Development | ✅ SQL analytics | ✅ Built-in functions | ✅ Best-in-class | R: Limited deployment | 10/10 |
-| Cost Efficiency | ✅ Free local | ✅ Pay-per-use | ✅ Open source | Commercial DBs: Expensive | 10/10 |
-| Learning Value | ✅ Industry standard | ✅ Modern cloud | ✅ Data science standard | Niche tools: Limited transfer | 9/10 |
-
 ## 🚀 Future Considerations
 
 ### Scaling Paths
@@ -300,7 +289,7 @@ This technology stack provides a modern, scalable foundation for our **AI Music 
 
 ## 📝 Conclusion
 
-Our technology stack is purpose-built for the **AI Music Recommender Agent**:
+Our technology stack is purpose-built for the **Music Pipeline**:
 
 1. **PostgreSQL** provides reliable, flexible local development with production similarity
 2. **Snowflake** offers cloud-scale analytics with built-in music data optimization

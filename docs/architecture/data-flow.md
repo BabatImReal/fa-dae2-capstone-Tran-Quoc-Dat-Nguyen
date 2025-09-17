@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document explains the simple **ELT (Extract, Load, Transform)** data flow for our **AI Music Recommender Agent**. We follow the foundational data engineering pattern of answering five key questions:
+This document explains the simple **ELT (Extract, Load, Transform)** data flow for our **Music Pipeline**. We follow the foundational data engineering pattern of answering five key questions:
 
 1. **Where does data come from?** → Music APIs + Datasets
 2. **How does it move?** → Python collectors + orchestration
@@ -193,17 +193,6 @@ ANALYTICS.MUSIC.RECOMMENDATIONS -- AI recommendation results
 - Error rates
 - Recommendation response time
 
-## 📈 Success Metrics
 
-**Data Pipeline Health**:
-- ✅ Data arrives daily
-- ✅ Less than 5% missing values
-- ✅ Processing completes within 30 minutes
-- ✅ Zero data corruption
-
-**AI System Performance**:
-- ✅ Recommendations respond in < 2 seconds
-- ✅ Support 1000+ concurrent users
-- ✅ 95%+ recommendation accuracy
 
 This simple ELT pattern ensures reliable data flow from music APIs to AI recommendations, using proven technologies and straightforward processes!
