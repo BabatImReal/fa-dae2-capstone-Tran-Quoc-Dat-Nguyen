@@ -1,21 +1,20 @@
-# 🎵 AI Music Recommender Agent - Data Engineering Capstone
+# 🎵 Music Pipeline - Data Engineering Capstone
 
 ## 🎯 Project Overview
 
 This capstone project is a data engineering initiative to build a robust pipeline for music data, enabling personalized music recommendations through modern ELT (Extract, Load, Transform) practices. The system integrates music data from multiple sources, processes it via cloud infrastructure, and supports AI-powered analytics and recommendations.
 
 ### 🎼 What We're Building
-- **AI-powered music recommendation engine** using collaborative filtering and content-based algorithms
 - **Multi-source data integration** from Last.fm API, Spotify API, and Kaggle datasets
 - **Scalable cloud architecture** with PostgreSQL (local) and Snowflake (cloud)
 - **Real-time and batch processing** capabilities for music analytics
 - **Production-ready pipeline** with orchestration, monitoring, and quality checks
 
 ### 🎯 Success Metrics
-- **Performance**: < 2 seconds recommendation response time
-- **Quality**: > 95% data completeness and accuracy
-- **Scale**: Support 1000+ concurrent users
-- **Coverage**: 6+ music genres and 1000+ artists
+- **Pipeline Reliability**: Smooth, uninterrupted data flow across all stages
+- **Data Quality**: Clean, accurate, and well-validated data throughout the pipeline
+- **Analysis Outcomes**: Results from analytics and AI processes are actionable and trustworthy
+- **Usability**: Processed data is ready for further activities such as reporting, modeling, and recommendations
 
 ## 📁 Project Structure
 
@@ -70,43 +69,6 @@ Analysis of real-time data sources like Last.fm and Spotify APIs with rate limit
 #### [`project-spec.md`](docs/project-spec.md)
 Comprehensive project specification including scope, success metrics, implementation timeline, and recommendations for building the AI Music Recommender Agent.
 
-## 🔧 Data Collection Scripts (`scripts/data_collection/`)
-
-### 🎵 [`lastfm_api_collector.py`](scripts/data_collection/lastfm_api_collector.py)
-**Primary music data collector** for Last.fm API integration:
-- ✅ **Top tracks and artists** collection
-- ✅ **User listening history** and recent tracks
-- ✅ **Genre-based recommendations** with tag filtering
-- ✅ **Rate limiting and retry logic** (5 req/sec)
-- ✅ **Comprehensive error handling** with fallback strategies
-- ✅ **JSON data export** to `data/external/`
-
-### 🎧 [`spotify_api_collector.py`](scripts/data_collection/spotify_api_collector.py)
-**Secondary music data source** for Spotify API integration:
-- ✅ **Track audio features** (valence, energy, danceability)
-- ✅ **Artist and album metadata** collection
-- ✅ **OAuth authentication** handling
-- ✅ **Batch processing** capabilities
-
-### 🌐 [`api_collector.py`](scripts/data_collection/api_collector.py)
-**Generic API collector framework** with reusable patterns:
-- ✅ **Environment-driven configuration**
-- ✅ **Pagination and batch processing**
-- ✅ **Exponential backoff retry logic**
-- ✅ **Timestamped JSON file output**
-
-### 🎲 [`fake_data_generator.py`](scripts/data_collection/fake_data_generator.py)
-**Synthetic data generator** for development and testing:
-- ✅ **Realistic music metadata** using Faker library
-- ✅ **User listening patterns** simulation
-- ✅ **CSV and JSON output formats**
-- ✅ **Fallback data source** for API unavailability
-
-### 🧪 [`test_api_collector.py`](scripts/data_collection/test_api_collector.py)
-**API testing utilities** for validation and debugging:
-- ✅ **Connection testing** for music APIs
-- ✅ **Data quality validation**
-- ✅ **Response format verification**
 
 ## 🚀 Quick Start
 
@@ -142,6 +104,89 @@ Comprehensive project specification including scope, success metrics, implementa
    ```bash
    pytest tests/test_data_pipeline.py
    ```
+
+## 🛠️ Environment Setup Scripts
+
+### 1️⃣ Python Environment & Dependencies
+
+#### Using UV (recommended)
+```bash
+uv sync
+```
+
+#### Using pip (alternative)
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2️⃣ Docker Setup for PostgreSQL
+
+#### 1. Configure `.env` for Docker Compose
+Set your PostgreSQL settings in `.env`:
+```
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=yourpassword
+POSTGRES_DB=musicdb
+POSTGRES_PORT=5432
+POSTGRES_HOST=localhost
+```
+- Replace `yourpassword` with a secure password.
+- You can change `POSTGRES_DB`, `POSTGRES_PORT`, and `POSTGRES_HOST` as needed.
+
+#### 2. Start PostgreSQL with Docker Compose
+```bash
+docker-compose up -d
+```
+
+#### 3. Check container status
+```bash
+docker ps
+```
+
+#### 4. Stop containers
+```bash
+docker-compose down
+```
+
+#### 5. Remove containers and volumes (WARNING: this deletes all database data!)
+```bash
+docker-compose down -v
+```
+> ⚠️ **Warning:** Only use `docker-compose down -v` if you want to permanently delete all database data.
+
+#### 6. View logs
+```bash
+docker-compose logs postgres
+```
+
+#### 7. Connect to PostgreSQL inside the container
+```bash
+docker exec -it music-postgres psql -U $POSTGRES_USER -d $POSTGRES_DB
+```
+- You can now run SQL commands directly in the container.
+
+### 3️⃣ Running Scripts
+
+#### Run a data collector (example: Last.fm)
+```bash
+uv run python scripts/data_collection/lastfm_api_collector.py
+# Or with pip:
+python scripts/data_collection/lastfm_api_collector.py
+```
+
+#### Run the main pipeline
+```bash
+uv run python main.py
+# Or with pip:
+python main.py
+```
+
+#### Run tests
+```bash
+pytest tests/test_data_pipeline.py
+```
 
 ## 🎵 Data Sources
 
@@ -181,13 +226,75 @@ Answering the five core questions of data systems:
 - **Batch + Real-Time**: Daily training, real-time inference
 - **Multi-Source**: Redundancy with fallback mechanisms
 
+## 🗓️ Capstone Module Structure
+
+This capstone project is organized into 5 modules, each representing one month of work. Each module contains 4 weeks, with focused labs and deliverables:
+
+- **Module 01: Foundations & Local ELT**
+  - Week 1: Project setup, repo structure, environment configuration
+  - Week 2: Data collection scripts and ingestion pipeline
+  - Week 3: Local PostgreSQL database setup and staging
+  - Week 4: Python database connectivity and local ELT validation
+
+- **Module 02: Cloud Data Warehouse & dbt**
+  - Week 1: Snowflake setup and infrastructure
+  - Week 2: Data loading and transformation with dbt
+  - Week 3: Dimensional modeling and analytics-ready schemas
+  - Week 4: Testing, documentation, and review
+
+- **Module 03: Real-time Streaming & Orchestration**
+  - Week 1: Kafka streaming infrastructure
+  - Week 2: Producer/consumer pipeline and Airflow orchestration
+  - Week 3: Production orchestration and batch pipeline
+  - Week 4: Integration planning and review
+
+- **Module 04: AI Agent Building**
+  - Week 1: LLM API integration and agent foundation
+  - Week 2: Agent tools and tool-using agent
+  - Week 3: RAG system and vector store
+  - Week 4: Data integration planning
+
+- **Module 05: Data Architecture & Finalization**
+  - Week 1: Agent-data integration and warehouse query tools
+  - Week 2: Safety, observability, and documentation
+  - Week 3: Final integration, testing, and demo practice
+  - Week 4: Final review, polish, and presentation prep
+
+---
+
 ## 📈 Development Roadmap
 
-- **Week 1-2**: ✅ Data collection and local staging
-- **Week 3-4**: ⏳ Cloud warehouse and dbt transformations
-- **Week 5-6**: 📋 Real-time streaming and orchestration
-- **Week 7-8**: 🤖 AI recommendation engine
-- **Week 9-10**: 🚀 Testing, optimization, and demo
+- **Module 01 (Month 1): Foundations & Local ELT**
+  - Week 1: Project setup & repo structure
+  - Week 2: Data collection scripts
+  - Week 3: Local PostgreSQL setup
+  - Week 4: Python DB connectivity & ELT validation
+
+- **Module 02 (Month 2): Cloud DWH & dbt**
+  - Week 1: Snowflake setup
+  - Week 2: dbt project & transformations
+  - Week 3: Dimensional modeling
+  - Week 4: Testing & documentation
+
+- **Module 03 (Month 3): Streaming & Orchestration**
+  - Week 1: Kafka setup
+  - Week 2: Producer/consumer & Airflow
+  - Week 3: Batch orchestration
+  - Week 4: Integration planning
+
+- **Module 04 (Month 4): AI Agent**
+  - Week 1: LLM API & agent foundation
+  - Week 2: Agent tools
+  - Week 3: RAG system
+  - Week 4: Data integration planning
+
+- **Module 05 (Month 5): Finalization & Presentation**
+  - Week 1: Agent-data integration
+  - Week 2: Safety & documentation
+  - Week 3: Final integration & demo
+  - Week 4: Final review & presentation
+
+---
 
 ## 🤝 Contributing
 

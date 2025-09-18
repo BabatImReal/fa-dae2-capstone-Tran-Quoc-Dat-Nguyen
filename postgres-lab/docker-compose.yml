@@ -22,3 +22,8 @@ services:
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  network:
+    external: true
+    name: fa-dae2-capstone_kafka_network
