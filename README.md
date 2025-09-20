@@ -39,9 +39,6 @@ fa-dae2-capstone/
 
 ### 🏗️ Architecture Documentation (`docs/architecture/`)
 
-#### [`data-engineering-fundamentals.md`](docs/architecture/data-engineering-fundamentals.md)
-**NEW**: Foundational concepts for modern data systems, answering the five core questions: Where does data come from? How does it move? Where do we store it? How do we process it? How do we use it?
-
 #### [`architecture.md`](docs/architecture/architecture.md)
 Complete system architecture overview with 8-layer design, from data sources to AI recommendations. Includes visual Mermaid diagrams and component relationships.
 
