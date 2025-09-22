@@ -4,12 +4,18 @@
 -- Create staging schema
 CREATE SCHEMA IF NOT EXISTS staging;
 
--- Create simple data landing table
-CREATE TABLE IF NOT EXISTS staging.raw_data (
-    id SERIAL PRIMARY KEY,
-    data_content TEXT,
-    file_name VARCHAR(255),
-    loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create music_transactions table with explicit columns
+CREATE TABLE IF NOT EXISTS staging.music_transactions (
+    transaction_id UUID PRIMARY KEY,
+    user_id UUID,
+    song_id UUID,
+    song_title VARCHAR(255),
+    artist VARCHAR(255),
+    album VARCHAR(255),
+    genre VARCHAR(50),
+    duration_seconds INTEGER,
+    timestamp TIMESTAMP,
+    status VARCHAR(50)
 );
 
 -- Grant permissions (user already exists from Docker environment)

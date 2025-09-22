@@ -35,7 +35,7 @@ def test_connection():
                 print(f"📊 PostgreSQL version: {version.split(',')[0]}")
 
                 # Test staging schema access
-                cur.execute("SELECT COUNT(*) FROM staging.raw_data")
+                cur.execute("SELECT COUNT(*) FROM staging.music_transactions")
                 count = cur.fetchone()[0]
                 print(f"📋 Staging table has {count} records")
 

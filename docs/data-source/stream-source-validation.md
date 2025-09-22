@@ -9,7 +9,7 @@
 - Last.fm API provides endpoints for real-time charts, recent tracks, and user listening data. These endpoints reflect new data as users interact with the platform, so querying every 5 minutes will return updated results (e.g., top tracks, trending artists, recent listens).
 
 ## Backup/Secondary Source: Spotify API
-- **URL**: https://api.spotify.com/v1/
+- **URL**: https://api.spotify.com/
 - **Authentication**: Required (OAuth 2.0)
 - **Rate Limits**: 20 requests/second (as per docs, subject to change)
 - **Data Format**: JSON

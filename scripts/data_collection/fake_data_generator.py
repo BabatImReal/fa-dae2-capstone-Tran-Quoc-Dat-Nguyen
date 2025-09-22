@@ -2,15 +2,19 @@
 import json
 import csv
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 
 from faker import Faker
 
 class FakeDataGenerator:
-    def __init__(self):
+    def __init__(self, seed=None):
+        # Use current time as seed for uniqueness if not provided
+        if seed is None:
+            seed = int(datetime.now().timestamp())
         self.fake = Faker()
+        self.fake.seed_instance(seed)
         self.data_dir = Path("data/external")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -43,21 +47,40 @@ class FakeDataGenerator:
             })
         return transactions
 
-    def generate_data_quality(self, count: int = 100) -> List[Dict]:
-        """Generate fake air quality sensor data."""
+    def generate_music_transaction_data(self, count: int = 100) -> List[Dict]:
+        """Generate unique fake music transactional records simulating near real-time events."""
+        genres = [
+            "Pop", "Rock", "Jazz", "Classical", "Hip-Hop", "Electronic",
+            "Country", "Reggae", "Blues", "Folk", "Metal", "R&B"
+        ]
+        statuses = ["completed", "pending", "failed"]
         records = []
-        for _ in range(count):
+        used_combinations = set()
+        used_titles = set()
+        now = datetime.now()
+        for i in range(count):
+            # Simulate near real-time by incrementing seconds for each record
+            timestamp = (now.replace(microsecond=0) + timedelta(seconds=i)).isoformat()
+            while True:
+                user_id = self.fake.uuid4()
+                song_id = self.fake.uuid4()
+                combo = (str(user_id), str(song_id), timestamp)
+                title = self.fake.sentence(nb_words=3).replace(".", "")
+                if combo not in used_combinations and title not in used_titles:
+                    used_combinations.add(combo)
+                    used_titles.add(title)
+                    break
             records.append({
-                "sensor_id": self.fake.uuid4(),
-                "timestamp": self.fake.date_time_this_year().isoformat(),
-                "pm25": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=500), 2),
-                "pm10": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=600), 2),
-                "co": round(self.fake.pyfloat(left_digits=2, right_digits=2, min_value=0, max_value=50), 2),
-                "no2": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=200), 2),
-                "o3": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=300), 2),
-                "temperature": round(self.fake.pyfloat(left_digits=2, right_digits=2, min_value=-20, max_value=50), 2),
-                "humidity": round(self.fake.pyfloat(left_digits=3, right_digits=2, min_value=0, max_value=100), 2),
-                "quality_flag": self.fake.random_element(["good", "moderate", "unhealthy", "hazardous"])
+                "transaction_id": self.fake.uuid4(),
+                "user_id": user_id,
+                "song_id": song_id,
+                "song_title": title,
+                "artist": self.fake.name(),
+                "album": self.fake.word().capitalize() + " Album",
+                "genre": self.fake.random_element(genres),
+                "duration_seconds": self.fake.random_int(min=120, max=420),
+                "timestamp": timestamp,
+                "status": self.fake.random_element(statuses)
             })
         return records
 
@@ -87,13 +110,14 @@ def main():
         # Generate different types of data
         users = generator.generate_user_data(100)
         transactions = generator.generate_transaction_data(100)
-        data_quality = generator.generate_data_quality(100)
+        music_transactions = generator.generate_music_transaction_data(100)
+
 
         # Save in different formats
         generator.save_data_as_json(users, "fake_users")
         generator.save_data_as_csv(transactions, "fake_transactions")
-        generator.save_data_as_json(data_quality, "fake_data_quality")
-        generator.save_data_as_csv(data_quality, "fake_data_quality")
+        generator.save_data_as_json(music_transactions, "fake_music_transactions")
+        generator.save_data_as_csv(music_transactions, "fake_music_transactions")
 
         print("Fake data generation completed successfully!")
 
