@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document contains Architecture Decision Records for our **Music Pipeline** capstone project. Each decision follows our ADR template and aligns with [data engineering fundamentals](data-engineering-fundamentals.md) - answering the five core questions of where data comes from, how it moves, where it's stored, how it's processed, and how it's used.
+This document contains Architecture Decision Records for our **Music Pipeline** capstone project.
 
 > **📚 Foundation**: Our technology choices support the fundamental data flow: Sources → Ingestion → Storage → Transformation → Analysis.
 
@@ -10,7 +10,6 @@ This document contains Architecture Decision Records for our **Music Pipeline** 
 
 ## Decision: PostgreSQL for Local Development
 
-**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -46,7 +45,6 @@ Store raw Last.fm API responses in JSONB columns, then query with `->` operators
 
 ## Decision: Snowflake for Cloud Data Warehouse
 
-**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -83,7 +81,6 @@ Load raw JSON from music APIs into RAW.MUSIC.TRACKS, then use dbt to transform i
 
 ## Decision: Python 3.10+ for Data Processing
 
-**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -120,7 +117,6 @@ Build async API collectors for Last.fm and Spotify, use pandas for data cleaning
 
 ## Decision: dbt for Data Transformation
 
-**Date**: 2024-09-17  
 **Status**: Approved
 
 **Context**:  
@@ -155,139 +151,130 @@ Create staging models to clean raw music data, then build dimensional models (di
 
 ---
 
-## Decision: Apache Airflow for Orchestration
+## Decision: Dagster for Orchestration 
 
-**Date**: 2024-09-17 
-**Status**: Proposed
+**Status**: Approved
 
 **Context**:  
-We need to orchestrate our music data pipeline with scheduling, monitoring, and error handling across multiple systems (APIs, PostgreSQL, Snowflake, dbt). This addresses the "How does it move?" question for pipeline coordination.
+We need a modern orchestration tool to manage scheduling, monitoring, and error handling across batch and real-time pipelines (Kaggle, Faker, Kafka, PostgreSQL, Snowflake, dbt). Dagster must coordinate containerized workflows and support modular pipeline design.
 
 **Decision**:  
-Use Apache Airflow for pipeline orchestration and scheduling.
+Use Dagster for orchestration and scheduling of all pipeline components.
 
 **Rationale** (Pipeline Orchestration):  
-- **Python Native**: Fits with our Python-first approach
-- **Rich Operators**: Built-in support for our tech stack (Snowflake, dbt, PostgreSQL)
-- **Monitoring**: Web UI for pipeline visibility
-- **Error Handling**: Retry logic and alerting
-- **Industry Standard**: Widely adopted in data engineering
-- **Workflow Management**: Perfect for complex ELT pipeline coordination
+- **Python Native**: Seamless integration with Python-based ingestion and transformation
+- **Rich Operators**: Built-in support for Snowflake, dbt, PostgreSQL, Kafka
+- **Containerization**: Works well with Docker for local and cloud deployments
+- **Monitoring**: Web UI for pipeline visibility and health checks
+- **Error Handling**: Retry logic, alerting, and failure recovery
+- **Modular Design**: Supports reusable, composable pipeline assets
+- **Workflow Management**: Ideal for complex ELT and streaming coordination
 
 **Alternatives Considered**:  
-- **Prefect**: Newer but less mature ecosystem
-- **Dagster**: Complex for our use case
-- **Cron Jobs**: Too simple, no monitoring or dependencies
+- **Prefect**: Less mature, smaller ecosystem
+- **Apache Airflow**: More complex setup, less modular for Python-first teams
+- **Cron Jobs**: No monitoring, dependency management, or error handling
 
 **Consequences**:  
-- ✅ Professional pipeline orchestration
+- ✅ Unified orchestration for batch, streaming, and transformation
 - ✅ Excellent monitoring and alerting
-- ✅ Strong community and ecosystem
-- ✅ Perfect for coordinating ELT workflows
-- ⚠️ Resource intensive (requires dedicated infrastructure)
-- ⚠️ Complex setup and maintenance
+- ✅ Strong Python and Docker integration
+- ✅ Modular, maintainable pipeline design
+- ⚠️ Requires learning Dagster concepts
+- ⚠️ Additional infrastructure for Dagster UI and scheduler
 
 **Example**:  
-Daily DAG that collects music data from APIs, loads to Snowflake, runs dbt transformations, and triggers ML model retraining.
+Dagster schedules and orchestrates batch ingestion from Kaggle to Snowflake, triggers dbt transformations, manages real-time ingestion from Faker to Kafka and PostgreSQL, and coordinates downstream AI agent workflows.
 
 ---
 
-## Summary
+## Decision: Kafka for Real-Time Streaming
+  
+**Status**: Approved
 
-| Technology | Purpose | Status | Key Benefit | Data Engineering Function |
-|------------|---------|--------|-------------|---------------------------|
-| PostgreSQL | Local Development | ✅ Approved | Fast iteration | Staging (OLTP) |
-| Snowflake | Cloud Warehouse | ✅ Approved | Scalable analytics | Storage & Analytics (OLAP) |
-| Python 3.10+ | Data Processing | ✅ Approved | Rich ecosystem | Ingestion & Transformation |
-| dbt | Data Transformation | ✅ Approved | SQL-first approach | Transform (ELT) |
-| Airflow | Orchestration | 🔄 Proposed | Professional pipeline | Orchestration |
+**Context**:  
+We need a robust solution for real-time data streaming between microservices and data pipelines, especially for user activity events and real-time recommendations. This addresses the "How does it move?" question for real-time data.
 
-This technology stack provides a modern, scalable foundation for our **Music Pipeline** while emphasizing learning industry-standard tools and following proven data engineering patterns.
+**Decision**:  
+Use Kafka for all real-time data streaming needs.
 
-## 🔄 Supporting the Five Fundamental Questions
+**Rationale** (Event Streaming):  
+- **High Throughput**: Handles large volumes of events (user actions, API calls)
+- **Low Latency**: Real-time processing for immediate insights
+- **Durability**: Persistent storage of event logs
+- **Scalability**: Easily scales with increased event load
+- **Stream Processing**: Integrates with tools like Faust for real-time analytics
+- **Decoupling**: Microservices can evolve independently
 
-### 1. Where does data come from? (Sources)
-- **Music APIs**: Last.fm, Spotify for real-time data
-- **Kaggle Datasets**: Historical music data for training
+**Alternatives Considered**:  
+- **RabbitMQ**: More complex routing, less suitable for high-throughput
+- **AWS Kinesis**: Vendor lock-in, less control over infrastructure
+- **Redis Streams**: Limited stream processing capabilities
 
-### 2. How does it move? (Ingestion & Transport)
-- **Python**: API collectors and batch processors
-- **Airflow**: Pipeline orchestration and scheduling
+**Consequences**:  
+- ✅ Immediate processing of user events
+- ✅ Scalable architecture for data pipelines
+- ✅ Durable event storage
+- ⚠️ Added complexity in managing Kafka cluster
+- ⚠️ Learning curve for Kafka ecosystem
 
-### 3. Where do we store it? (Storage)
-- **PostgreSQL**: Local staging (OLTP)
-- **Snowflake**: Cloud analytics (OLAP)
+**Example**:  
+Stream user activity events from FastAPI to Kafka, process in real-time with Faust, and update PostgreSQL and Snowflake for analytics and recommendations.
 
-### 4. How do we process it? (Transformation)
-- **dbt**: SQL-first transformations in warehouse
-- **Python**: Complex processing and ML feature engineering
+---
 
-### 5. How do we use it? (Analysis & Output)
-- **Snowflake ANALYTICS**: Dimensional models for BI
-- **Python ML**: AI recommendation engine
-- **REST APIs**: Real-time recommendation serving
+## Decision: uv for Package Management
 
-## 🔄 Supporting Capstone Goals
+**Status**: Approved  
+**Why**: Fast, modern Python package/dependency management.  
+**How**: Used for reproducible environment setup and dependency resolution.
 
-### 1. Music Pipeline
-- **PostgreSQL**: Fast local prototyping of recommendation algorithms
-- **Snowflake**: Scalable training data storage for ML models
-- **Python**: Rich ML ecosystem for building recommendation engines
+---
 
-### 2. Real-time Recommendations
-- **PostgreSQL**: Local caching of user preferences
-- **Snowflake**: Historical analysis for improving recommendations
-- **Python**: Async processing for real-time API responses
+## Decision: pytest & great-expectations for Testing
 
-### 3. Multi-Source Data Integration
-- **PostgreSQL**: Flexible staging for diverse music APIs
-- **Snowflake**: Unified analytics across all music data sources
-- **Python**: Universal API client capabilities
+**Status**: Approved  
+**Why**: pytest for unit/integration tests; great-expectations for data quality validation.  
+**How**: Used in CI/CD and local development to ensure code and data reliability.
 
-### 4. Scalability & Performance
-- **PostgreSQL**: Efficient local development and testing
-- **Snowflake**: Cloud-scale processing for production workloads
-- **Python**: Proven performance for data-intensive applications
+---
 
-## 📊 Performance Considerations
+## Decision: Git + GitHub for Version Control
 
-### Local Development (PostgreSQL)
-```
-- Typical Query Response: <100ms
-- JSON Operations: <50ms  
-- Local Data Reload: <30 seconds
-- Development Iteration: Fast & efficient
-```
+**Status**: Approved  
+**Why**: Industry-standard distributed version control and collaboration.  
+**How**: All code, dbt models, and documentation managed in GitHub repositories.
 
-### Production Analytics (Snowflake)
-```
-- Complex Recommendation Queries: <2 seconds
-- Batch ML Training: Minutes (not hours)
-- Concurrent Users: 1000+ supported
-- Data Loading: GB/minute throughput
-```
+---
 
-### Python Processing
-```
-- API Collection: 100+ requests/minute (rate-limited)
-- Data Transformation: MB/second processing
-- ML Training: Leverages numpy/pandas optimizations
-- Memory Efficiency: Polars for large datasets
-```
+## Decision: Docker for Containerization
 
-## 🚀 Future Considerations
+**Status**: Approved  
+**Why**: Consistent, portable environments for all pipeline components.  
+**How**: All major services (Dagster, Kafka, PostgreSQL, dbt, Python scripts) run in Docker containers.
 
-### Scaling Paths
-- **PostgreSQL**: Can migrate to cloud PostgreSQL services (AWS RDS, Google Cloud SQL)
-- **Snowflake**: Already cloud-native, auto-scaling
-- **Python**: Containerizable, serverless deployment ready
+---
 
-### Technology Evolution
-- **PostgreSQL**: Vector extensions for music similarity search
-- **Snowflake**: Native ML functions (coming features)
-- **Python**: Continued ML library ecosystem growth
+## Summary Table
 
-## 📝 Conclusion
+| Technology           | Purpose                | Status    | Key Benefit           | Containerized | Orchestrated By |
+|----------------------|------------------------|-----------|-----------------------|---------------|-----------------|
+| PostgreSQL           | Local OLTP staging     | ✅        | Fast dev, ACID        | Docker        | Dagster         |
+| Snowflake            | Cloud OLAP analytics   | ✅        | Scalable, ML-ready    | -             | Dagster         |
+| Python 3.10+         | Ingestion, ML, ETL     | ✅        | Rich ecosystem        | Docker        | Dagster         |
+| dbt                  | SQL transformation     | ✅        | Testable, versioned   | Docker        | Dagster         |
+| Dagster              | Orchestration          | ✅        | Modern, Python-native | Docker        | -               |
+| Kafka                | Real-time streaming    | ✅        | Scalable events       | Docker        | -               |
+| uv                   | Package management     | ✅        | Fast, reproducible    | -             | -               |
+| pytest               | Unit/integration tests | ✅        | Reliable code testing | -             | -               |
+| great-expectations   | Data validation        | ✅        | Data quality checks   | -             | -               |
+| Git + GitHub         | Version control        | ✅        | Collaboration         | -             | -               |
+| Docker               | Containerization       | ✅        | Portability           | -             | -               |
+
+---
+
+
+## Conclusion
 
 Our technology stack is purpose-built for the **Music Pipeline**:
 
