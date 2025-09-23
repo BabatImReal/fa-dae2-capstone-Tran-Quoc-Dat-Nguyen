@@ -1,4 +1,4 @@
-# scripts/data_collection/lastfm_api_collector.py
+ # scripts/data_collection/lastfm_api_collector.py
 import json
 import logging
 import os

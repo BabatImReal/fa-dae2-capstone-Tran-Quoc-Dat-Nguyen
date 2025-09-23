@@ -10,9 +10,8 @@ from faker import Faker
 
 class FakeDataGenerator:
     def __init__(self, seed=None):
-        # Use current time as seed for uniqueness if not provided
-        if seed is None:
-            seed = int(datetime.now().timestamp())
+        # Always use current time as seed for different data each run
+        seed = int(datetime.now().timestamp() * 1000000)  # Use microseconds for more uniqueness
         self.fake = Faker()
         self.fake.seed_instance(seed)
         self.data_dir = Path("data/external")
@@ -48,19 +47,32 @@ class FakeDataGenerator:
         return transactions
 
     def generate_music_transaction_data(self, count: int = 100) -> List[Dict]:
-        """Generate unique fake music transactional records simulating near real-time events."""
+        """Generate unique fake music listening events simulating real-time user interactions."""
         genres = [
             "Pop", "Rock", "Jazz", "Classical", "Hip-Hop", "Electronic",
             "Country", "Reggae", "Blues", "Folk", "Metal", "R&B"
         ]
-        statuses = ["completed", "pending", "failed"]
+        # Music listening events/actions
+        music_events = [
+            "play", "pause", "resume", "next", "previous", "backward", 
+            "forward", "stop", "repeat", "shuffle", "skip", "like", 
+            "dislike", "add_to_playlist", "remove_from_playlist", "share"
+        ]
+        # Weighted distribution for more realistic event patterns
+        event_weights = {
+            "play": 25, "pause": 20, "resume": 15, "next": 12, "previous": 8,
+            "backward": 3, "forward": 3, "stop": 5, "repeat": 2, "shuffle": 3,
+            "skip": 8, "like": 4, "dislike": 2, "add_to_playlist": 3,
+            "remove_from_playlist": 1, "share": 2
+        }
         records = []
         used_combinations = set()
         used_titles = set()
         now = datetime.now()
+        
         for i in range(count):
-            # Simulate near real-time by incrementing seconds for each record
-            timestamp = (now.replace(microsecond=0) + timedelta(seconds=i)).isoformat()
+            # Simulate events spaced 5 minutes apart for realistic timeline
+            timestamp = (now.replace(microsecond=0) + timedelta(minutes=i * 5)).isoformat()
             while True:
                 user_id = self.fake.uuid4()
                 song_id = self.fake.uuid4()
@@ -70,23 +82,50 @@ class FakeDataGenerator:
                     used_combinations.add(combo)
                     used_titles.add(title)
                     break
+            
+            # Select event based on weights for more realistic distribution
+            event_action = self.fake.random_element(elements=list(event_weights.keys()))
+            
+            # Calculate position in song based on event type
+            duration = self.fake.random_int(min=120, max=420)
+            if event_action in ["play", "resume"]:
+                position_seconds = 0 if event_action == "play" else self.fake.random_int(min=1, max=duration-10)
+            elif event_action in ["pause", "stop"]:
+                position_seconds = self.fake.random_int(min=10, max=duration-10)
+            elif event_action in ["next", "skip", "previous"]:
+                position_seconds = self.fake.random_int(min=5, max=duration)
+            else:
+                position_seconds = self.fake.random_int(min=0, max=duration)
+            
             records.append({
-                "transaction_id": self.fake.uuid4(),
+                "event_id": self.fake.uuid4(),
                 "user_id": user_id,
+                "session_id": self.fake.uuid4(),
                 "song_id": song_id,
                 "song_title": title,
                 "artist": self.fake.name(),
                 "album": self.fake.word().capitalize() + " Album",
                 "genre": self.fake.random_element(genres),
-                "duration_seconds": self.fake.random_int(min=120, max=420),
+                "duration_seconds": duration,
+                "position_seconds": position_seconds,
+                "event_action": event_action,
+                "device_type": self.fake.random_element(["mobile", "desktop", "tablet", "smart_speaker"]),
+                "platform": self.fake.random_element(["spotify", "apple_music", "youtube_music", "amazon_music"]),
                 "timestamp": timestamp,
-                "status": self.fake.random_element(statuses)
+                "user_premium": self.fake.boolean(chance_of_getting_true=30)
             })
         return records
 
+    def add_ingested_at(self, data: List[Dict]) -> List[Dict]:
+        now = datetime.utcnow().isoformat()
+        for record in data:
+            record["ingested_at"] = now
+        return data
+
     def save_data_as_json(self, data: List[Dict], filename: str) -> Path:
-        """Save data to JSON file."""
-        file_path = self.data_dir / f"{filename}.json"
+        """Save data to a new JSON file with a timestamp in the filename."""
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        file_path = self.data_dir / f"{filename}_{timestamp}.json"
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return file_path
@@ -108,16 +147,14 @@ def main():
 
     try:
         # Generate different types of data
-        users = generator.generate_user_data(100)
-        transactions = generator.generate_transaction_data(100)
-        music_transactions = generator.generate_music_transaction_data(100)
+        users = generator.add_ingested_at(generator.generate_user_data(100))
+        transactions = generator.add_ingested_at(generator.generate_transaction_data(100))
+        music_transactions = generator.add_ingested_at(generator.generate_music_transaction_data(100))
 
 
         # Save in different formats
         generator.save_data_as_json(users, "fake_users")
-        generator.save_data_as_csv(transactions, "fake_transactions")
         generator.save_data_as_json(music_transactions, "fake_music_transactions")
-        generator.save_data_as_csv(music_transactions, "fake_music_transactions")
 
         print("Fake data generation completed successfully!")
 

@@ -35,10 +35,14 @@ def main():
 
     # Load and insert fake music transactions
     print("\n3️⃣ Loading and Inserting Fake Music Transactions...")
-    data_path = Path(__file__).parent.parent / "data" / "external" / "fake_music_transactions.json"
-    if not data_path.exists():
-        print(f"❌ Data file not found: {data_path}")
+    data_dir = Path(__file__).parent.parent / "data" / "external"
+    json_files = sorted(data_dir.glob("fake_music_transactions_*.json"), reverse=True)
+    if not json_files:
+        print(f"❌ No timestamped data files found in: {data_dir}")
         return False
+
+    data_path = json_files[0]  # Use the latest file
+    print(f"Using data file: {data_path}")
 
     with open(data_path, "r", encoding="utf-8") as f:
         music_transactions = json.load(f)

@@ -4,18 +4,24 @@
 -- Create staging schema
 CREATE SCHEMA IF NOT EXISTS staging;
 
--- Create music_transactions table with explicit columns
+-- Create music_transactions table with music event structure
 CREATE TABLE IF NOT EXISTS staging.music_transactions (
-    transaction_id UUID PRIMARY KEY,
+    event_id UUID PRIMARY KEY,
     user_id UUID,
+    session_id UUID,
     song_id UUID,
     song_title VARCHAR(255),
     artist VARCHAR(255),
     album VARCHAR(255),
     genre VARCHAR(50),
     duration_seconds INTEGER,
+    position_seconds INTEGER,
+    event_action VARCHAR(50),
+    device_type VARCHAR(50),
+    platform VARCHAR(50),
     timestamp TIMESTAMP,
-    status VARCHAR(50)
+    user_premium BOOLEAN,
+    ingested_at TIMESTAMP
 );
 
 -- Grant permissions (user already exists from Docker environment)
