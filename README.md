@@ -3,7 +3,6 @@
 - **One-sentence summary**: An end-to-end music data pipeline that ingests both batch (Kaggle dataset) and streaming (Faker-generated) data, enabling analysis and real-time recommendations.
 - **Business/value objective**: Provide users with meaningful music recommendations and insights by leveraging batch data for analytics and fake streaming data for real-time result generation.
 - **Success metrics** (quantitative): Recommendation accuracy, user engagement rate, pipeline reliability, coverage of genres/artists.
-- **Architecture foundation**: Built on [data engineering fundamentals](architecture/data-engineering-fundamentals.md) - answering the five core questions of modern data systems.
 
 ### Problem & Scope
 - **Problem statement and constraints**: Users require personalized music recommendations and metadata, but real streaming data may not be available. The pipeline must support both batch analytics and real-time queries using fake data for development and demonstration.

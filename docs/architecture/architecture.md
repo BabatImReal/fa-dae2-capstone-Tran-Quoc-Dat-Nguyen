@@ -6,4 +6,4 @@ This architecture supports an end-to-end music data pipeline with both batch and
 
 ## System Diagram
 
-![Architecture Diagram](diagram\architecture.png)
+![Architecture Diagram](diagram/architecture.png)
