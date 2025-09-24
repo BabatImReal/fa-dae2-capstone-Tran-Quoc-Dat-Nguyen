@@ -10,8 +10,10 @@
 - **In/out of scope**: In scope: recommendations, metadata lookup, batch analytics, fake data streaming integration. Out of scope: audio playback, user authentication, social features.
 
 ### Data Sources
-- **Batch source(s) (planned/production)**: [Kaggle Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset), CSV, ~230k tracks, static snapshot (last updated 2023)
-- **Streaming source(s)**: Fake data stream generated via Python scripts and Faker
+- **Batch source(s) (planned/production)**: [Kaggle Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset), CSV, ~230k tracks, static snapshot (last updated 2023).  
+  See [batch-source-validation.md](docs/data-source/batch-source-validation.md) for validation details.
+- **Streaming source(s)**: Fake data stream generated via Python scripts and Faker.  
+  See [stream-source-validation.md](docs/data-source/stream-source-validation.md) for validation details.
 - **Incremental strategy**: Use track/artist IDs and timestamps for deduplication and incremental updates
 
 ### Architecture Overview

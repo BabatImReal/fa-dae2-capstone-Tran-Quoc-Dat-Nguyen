@@ -3,7 +3,7 @@
 - **Authentication**: Kaggle account required for download
 - **Data Format**: CSV
 - **Dataset Details**: Contains metadata and audio features for Spotify tracks, including artist, album, genre, popularity, and various audio analysis metrics.
-- **Volume**: Over 230,000 tracks, ~100 MB CSV file
+- **Volume**: Over 100,000 tracks, ~21 MB CSV file
 - **Update Frequency**: Static snapshot (not updated regularly; last updated on Kaggle: 2023)
 - **Why I chose this**: Contains rich, structured music data suitable for analytics, recommendation, and machine learning. Widely used in research and projects.
 
@@ -11,9 +11,9 @@
 [Faker-generated synthetic music track data]
 
 ## Testing Results
-- [ ] Dataset accessible
-- [ ] Data quality good
-- [ ] Documentation clear
+- [x] Dataset accessible
+- [x] Data quality good
+- [x] Documentation clear
 
 ---
 
