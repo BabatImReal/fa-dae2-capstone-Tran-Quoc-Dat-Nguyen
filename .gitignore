@@ -39,6 +39,6 @@ logs/
 Thumbs.db
 
 # Docker
-.dockerignore
+.dockerignore*.p8
 *.pem
 *.pub
