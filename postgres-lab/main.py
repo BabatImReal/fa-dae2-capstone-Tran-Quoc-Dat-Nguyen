@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent / "scripts" / "database"))
 
 from scripts.database.connection_test import test_connection
 from scripts.database.crud_demo import demonstrate_crud
-from scripts.database.insert_music_transactions import insert_music_transactions  # <-- Add this import
+from scripts.ingestion.ingest_to_postgre import insert_music_transactions
 
 import json
 
