@@ -4,8 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Import your scripts
-from scripts.data_collection.api_collector import main as collect_api_data
-from scripts.data_collection.fake_data_generator import main as generate_fake_data
+from scripts.ingestion.collect_fake_data import main as generate_fake_data
 
 # Configure logging
 logging.basicConfig(
@@ -20,12 +19,9 @@ def main():
     logger.info("🚀 Starting Data Collection Pipeline")
 
     try:
-        # Step 1: Collect data from API
-        logger.info("📡 Step 1: Collecting real data from API")
-        collect_api_data()
 
-        # Step 2: Generate fake data for testing
-        logger.info("🎭 Step 2: Generating fake data for testing")
+        # Step 1: Generate fake data for testing
+        logger.info("🎭 Step 1: Generating fake data for testing")
         generate_fake_data()
 
         logger.info("🎉 Data collection completed successfully!")
