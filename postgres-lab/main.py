@@ -8,12 +8,11 @@ import sys
 from pathlib import Path
 
 # Add the scripts directory to the path
-sys.path.append(str(Path(__file__).parent / "scripts" / "database"))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from scripts.database.connection_test import test_connection
 from scripts.database.crud_demo import demonstrate_crud
 from scripts.ingestion.ingest_to_postgre import insert_music_transactions
-
 import json
 
 def main():
