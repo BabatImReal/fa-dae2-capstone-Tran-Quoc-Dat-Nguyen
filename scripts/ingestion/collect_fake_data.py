@@ -27,8 +27,8 @@ class FakeDataGenerator:
                 "email": self.fake.email(),
                 "address": self.fake.address().replace("\n", ", "),
                 "phone": self.fake.phone_number(),
-                "dob": self.fake.date_of_birth(minimum_age=18, maximum_age=90).isoformat(),
-                "created_at": self.fake.date_time_this_decade().isoformat()
+                "dob": self.fake.date_of_birth(minimum_age=18, maximum_age=90).strftime("%Y-%m-%d"),
+                "created_at": self.fake.date_time_this_decade().strftime("%Y-%m-%d %H:%M:%S")
             })
         return users
 
@@ -41,7 +41,7 @@ class FakeDataGenerator:
                 "user_id": self.fake.uuid4(),
                 "amount": round(self.fake.pyfloat(left_digits=3, right_digits=2, positive=True), 2),
                 "currency": self.fake.currency_code(),
-                "timestamp": self.fake.date_time_this_year().isoformat(),
+                "timestamp": self.fake.date_time_this_year().strftime("%Y-%m-%d %H:%M:%S"),
                 "status": self.fake.random_element(["completed", "pending", "failed"])
             })
         return transactions
@@ -72,7 +72,8 @@ class FakeDataGenerator:
         
         for i in range(count):
             # Simulate events spaced 5 minutes apart for realistic timeline
-            timestamp = (now.replace(microsecond=0) + timedelta(minutes=i * 5)).isoformat()
+            # Use strftime for consistent timestamp format compatible with Snowflake
+            timestamp = (now.replace(microsecond=0) + timedelta(minutes=i * 5)).strftime("%Y-%m-%d %H:%M:%S")
             while True:
                 user_id = self.fake.uuid4()
                 song_id = self.fake.uuid4()
@@ -117,14 +118,15 @@ class FakeDataGenerator:
         return records
 
     def add_ingested_at(self, data: List[Dict]) -> List[Dict]:
-        now = datetime.utcnow().isoformat()
+        # Use strftime for consistent timestamp format compatible with Snowflake
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         for record in data:
             record["ingested_at"] = now
         return data
 
     def save_data_as_json(self, data: List[Dict], filename: str) -> Path:
         """Save data to a new JSON file with a timestamp in the filename."""
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.utcnow().strftime("%Y_%m_%d_%H_%M")
         file_path = self.data_dir / f"{filename}_{timestamp}.json"
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)

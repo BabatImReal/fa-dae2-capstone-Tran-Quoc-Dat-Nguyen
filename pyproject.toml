@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "faker>=37.6.0",
     "flask>=3.1.2",
+    "kaggle>=1.7.4.5",
     "kagglehub>=0.3.13",
     "openaq>=0.4.0",
     "pandas>=2.3.2",

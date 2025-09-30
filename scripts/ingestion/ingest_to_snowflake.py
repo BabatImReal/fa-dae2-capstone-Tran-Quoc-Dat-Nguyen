@@ -6,9 +6,9 @@ STAGE_FQN = "SC_RAW_DATA.CSV_STAGE"
 TABLE_FQN = "SC_RAW_DATA.raw_data"
 
 TRACK_COLS = (
-    "track_id,artists,album_name,track_name,popularity,duration_ms,explicit,"
-    "danceability,energy,key,loudness,mode,speechiness,acousticness,"
-    "instrumentalness,liveness,valence,tempo,time_signature,track_genre"
+    "genre,artist_name,track_name,track_id,popularity,acousticness,danceability,"
+    "duration_ms,energy,instrumentalness,key,liveness,loudness,mode,speechiness,"
+    "tempo,time_signature,valence"
 )
 
 def get_conn():
@@ -79,7 +79,7 @@ def load_csv_to_table(pattern: str = r'.*\.csv(\.gz)?') -> bool:
 
 
 def main():
-    csv_path = "data\external\dataset_clean.csv"
+    csv_path = "data\external\SpotifyFeatures.csv"
     if upload_csv_to_stage(csv_path):
         load_csv_to_table()
 

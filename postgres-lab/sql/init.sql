@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS staging.music_transactions (
     platform VARCHAR(50),
     timestamp TIMESTAMP,
     user_premium BOOLEAN,
-    ingested_at TIMESTAMP
+    ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Grant permissions (user already exists from Docker environment)
