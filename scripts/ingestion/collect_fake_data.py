@@ -10,6 +10,7 @@ from faker import Faker
 
 class FakeDataGenerator:
     def __init__(self, seed=None):
+        # Initialize the Faker instance and create data directory
         # Always use current time as seed for different data each run
         seed = int(datetime.now().timestamp() * 1000000)  # Use microseconds for more uniqueness
         self.fake = Faker()
@@ -17,6 +18,7 @@ class FakeDataGenerator:
         self.data_dir = Path("data/external")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+    # Generate a list of fake user records
     def generate_user_data(self, count: int = 100) -> List[Dict]:
         """Generate fake user data."""
         users = []
@@ -32,6 +34,7 @@ class FakeDataGenerator:
             })
         return users
 
+    # Generate a list of fake transaction records
     def generate_transaction_data(self, count: int = 100) -> List[Dict]:
         """Generate fake transaction data."""
         transactions = []
@@ -46,6 +49,7 @@ class FakeDataGenerator:
             })
         return transactions
 
+    # Generate a list of fake music listening event records
     def generate_music_transaction_data(self, count: int = 100) -> List[Dict]:
         """Generate unique fake music listening events simulating real-time user interactions."""
         genres = [
@@ -117,6 +121,7 @@ class FakeDataGenerator:
             })
         return records
 
+    # Add an 'ingested_at' timestamp to each record in the data
     def add_ingested_at(self, data: List[Dict]) -> List[Dict]:
         # Use strftime for consistent timestamp format compatible with Snowflake
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -124,6 +129,7 @@ class FakeDataGenerator:
             record["ingested_at"] = now
         return data
 
+    # Save data as a JSON file with a timestamped filename
     def save_data_as_json(self, data: List[Dict], filename: str) -> Path:
         """Save data to a new JSON file with a timestamp in the filename."""
         timestamp = datetime.utcnow().strftime("%Y_%m_%d_%H_%M")
@@ -132,6 +138,7 @@ class FakeDataGenerator:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return file_path
 
+    # Save data as a CSV file
     def save_data_as_csv(self, data: List[Dict], filename: str) -> Path:
         """Save data to CSV file."""
         if not data:
@@ -143,6 +150,7 @@ class FakeDataGenerator:
             writer.writerows(data)
         return file_path
 
+# Main function to demonstrate fake data generation and saving
 def main():
     """Main function to demonstrate fake data generation."""
     generator = FakeDataGenerator()
