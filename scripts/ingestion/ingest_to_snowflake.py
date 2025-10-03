@@ -11,6 +11,7 @@ TRACK_COLS = [
     "instrumentalness", "liveness", "valence", "tempo", "time_signature", "track_genre"
 ]
 
+# Get a Snowflake database connection using environment variables
 def get_conn():
     load_dotenv()
     auth = os.getenv("SNOWFLAKE_AUTHENTICATOR", "SNOWFLAKE_JWT")
@@ -30,6 +31,7 @@ def get_conn():
         )
     return snowflake.connector.connect(**kwargs)
 
+# Upload a CSV file to the Snowflake stage
 def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
     if not csv_file_path:
         print("❌ CSV_PATH not set.")
@@ -48,6 +50,7 @@ def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
         print(f"📄 Files in stage: {len(listed)}")
     return True
 
+# Load CSV data from the stage into the Snowflake table
 def load_csv_to_table(pattern: str = r'.*\.csv(\.gz)?') -> bool:
     columns_sql = ', '.join(TRACK_COLS)
     copy_sql = f"""
@@ -79,6 +82,7 @@ def load_csv_to_table(pattern: str = r'.*\.csv(\.gz)?') -> bool:
     return True
 
 
+# Main function to upload and load CSV data into Snowflake
 def main():
     csv_path = "data\external\dataset_clean.csv"
     if upload_csv_to_stage(csv_path):

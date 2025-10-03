@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Get a PostgreSQL database connection using environment variables
 def get_connection():
     """Get database connection using environment variables."""
     params = {
@@ -21,6 +22,7 @@ def get_connection():
     }
     return psycopg.connect(**params)
 
+# Insert a list of music event records into the staging.music_transactions table
 def insert_music_transactions(records):
     """
     Insert a list of music event dicts into staging.music_transactions.
@@ -60,6 +62,7 @@ def insert_music_transactions(records):
         return False
 
 
+# Main function to load and insert music transactions into PostgreSQL
 def main():
     """Main function to load and insert music transactions into PostgreSQL."""
     print("💾 PostgreSQL Data Ingestion")
