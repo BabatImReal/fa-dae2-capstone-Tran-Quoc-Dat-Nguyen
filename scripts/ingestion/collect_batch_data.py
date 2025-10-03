@@ -1,61 +1,29 @@
-import kagglehub
-import shutil
-from pathlib import Path
+import kaggle
+import pandas as pd
+import os
 
-# Try multiple Spotify datasets
-datasets = [
-    "maharshipandya/-spotify-tracks-dataset",
-    "zaheenhamidani/ultimate-spotify-tracks-db",
-    "yamaerenay/spotify-dataset-19212020-160k-tracks"
-]
+kaggle.api.authenticate()
 
-# Define target directory
-target_dir = Path("data/external")
-target_dir.mkdir(parents=True, exist_ok=True)
+# Download the Spotify tracks dataset to the current directory
+kaggle.api.dataset_download_files(
+    'maharshipandya/-spotify-tracks-dataset',
+    path='data/external',
+    unzip=True
+)
 
-for dataset in datasets:
-    try:
-        print(f"\n📥 Trying dataset: {dataset}")
-        path = kagglehub.dataset_download(dataset)
-        print("Path to dataset files:", path)
+# Path to downloaded dataset
+dataset_path = "data/external/dataset.csv"
+cleaned_path = "data/external/dataset_clean.csv"
 
-        # Check what files exist in the downloaded path
-        download_path = Path(path)
-        files_found = list(download_path.rglob("*.csv")) + list(download_path.rglob("*.json")) + list(download_path.rglob("*.parquet"))
-        
-        print(f"Files in download path:")
-        for item in files_found:
-            print(f"  - {item} ({'file' if item.is_file() else 'directory'})")
+# Load dataset
+df = pd.read_csv(dataset_path)
 
-        if not files_found:
-            print(f"  ⚠️ No data files found in {dataset}")
-            continue
+# Drop first column if it's just an index
+if df.columns[0].startswith("Unnamed") or df.columns[0] == "0":
+    df = df.drop(df.columns[0], axis=1)
 
-        # Move all files from downloaded path to data/external
-        moved_files = 0
-        for item in files_found:
-            if item.is_file():
-                dest = target_dir / item.name
-                try:
-                    shutil.copy2(str(item), str(dest))
-                    print(f"  ✅ Copied: {item.name}")
-                    moved_files += 1
-                except Exception as e:
-                    print(f"  ❌ Failed to copy {item.name}: {e}")
+# Save cleaned dataset
+df.to_csv(cleaned_path, index=False)
 
-        if moved_files > 0:
-            print(f"✅ Successfully downloaded {dataset}")
-            break
-        
-    except Exception as e:
-        print(f"❌ Failed to download {dataset}: {e}")
-        continue
-
-print(f"\nDataset files location: {target_dir}")
-print(f"Total files moved: {moved_files}")
-
-# Verify files in target directory
-print("All files in target directory:")
-for f in target_dir.iterdir():
-    if f.is_file():
-        print(f"  - {f.name} ({f.stat().st_size} bytes)")
+print(f"Cleaned dataset saved to {cleaned_path}")
+print(df.head())
