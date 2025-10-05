@@ -1,6 +1,5 @@
 import kaggle
 import pandas as pd
-import os
 
 kaggle.api.authenticate()
 

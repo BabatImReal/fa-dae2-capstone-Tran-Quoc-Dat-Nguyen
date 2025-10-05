@@ -1,7 +1,6 @@
 # scripts/data_collection/fake_data_generator.py
 import json
 import csv
-import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
@@ -158,7 +157,6 @@ def main():
     try:
         # Generate different types of data
         users = generator.add_ingested_at(generator.generate_user_data(100))
-        transactions = generator.add_ingested_at(generator.generate_transaction_data(100))
         music_transactions = generator.add_ingested_at(generator.generate_music_transaction_data(100))
 
 
