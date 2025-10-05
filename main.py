@@ -14,12 +14,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def main():
     """Main data collection pipeline."""
     logger.info("🚀 Starting Data Collection Pipeline")
 
     try:
-
         # Step 1: Generate fake data for testing
         logger.info("🎭 Step 1: Generating fake data for testing")
         generate_fake_data()
@@ -30,6 +30,7 @@ def main():
     except Exception as e:
         logger.error(f"❌ Pipeline failed: {e}")
         raise
+
 
 if __name__ == "__main__":
     # Load environment variables
