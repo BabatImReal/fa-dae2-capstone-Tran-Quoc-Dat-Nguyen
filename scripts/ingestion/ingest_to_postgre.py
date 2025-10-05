@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
 # Get a PostgreSQL database connection using environment variables
 def get_connection():
     """Get database connection using environment variables."""
@@ -21,6 +22,7 @@ def get_connection():
         "password": os.getenv("POSTGRES_PASSWORD"),
     }
     return psycopg.connect(**params)
+
 
 # Insert a list of music event records into the staging.music_transactions table
 def insert_music_transactions(records):
@@ -34,9 +36,21 @@ def insert_music_transactions(records):
 
     # Updated columns to match new music event data structure
     columns = [
-        "event_id", "user_id", "session_id", "song_id", "song_title", "artist",
-        "album", "genre", "duration_seconds", "position_seconds", "event_action",
-        "device_type", "platform", "timestamp", "user_premium"
+        "event_id",
+        "user_id",
+        "session_id",
+        "song_id",
+        "song_title",
+        "artist",
+        "album",
+        "genre",
+        "duration_seconds",
+        "position_seconds",
+        "event_action",
+        "device_type",
+        "platform",
+        "timestamp",
+        "user_premium",
     ]
 
     try:
@@ -45,15 +59,15 @@ def insert_music_transactions(records):
                 for record in records:
                     # Extract values in the correct order, handling missing fields gracefully
                     values = tuple(record.get(col) for col in columns)
-                    
+
                     cur.execute(
                         f"""
                         INSERT INTO staging.music_transactions
-                        ({', '.join(columns)})
+                        ({", ".join(columns)})
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (event_id) DO NOTHING
                         """,
-                        values
+                        values,
                     )
             conn.commit()
         return True
@@ -71,11 +85,11 @@ def main():
     # Find and load the latest music transactions file
     print("\n📁 Loading music transactions data...")
     data_dir = Path("data/external")
-    
+
     if not data_dir.exists():
         print(f"❌ Data directory not found: {data_dir}")
         return False
-    
+
     # Look for the latest fake music transactions file
     json_files = sorted(data_dir.glob("fake_music_transactions_*.json"), reverse=True)
     if not json_files:
@@ -91,13 +105,13 @@ def main():
     try:
         with open(data_path, "r", encoding="utf-8") as f:
             music_transactions = json.load(f)
-        
+
         if not music_transactions:
             print("❌ No data found in the file")
             return False
-            
+
         print(f"📊 Loaded {len(music_transactions)} music transaction records")
-        
+
     except Exception as e:
         print(f"❌ Error loading data file: {e}")
         return False
@@ -105,7 +119,9 @@ def main():
     # Insert data into PostgreSQL
     print("\n💾 Inserting data into PostgreSQL...")
     if insert_music_transactions(music_transactions):
-        print(f"✅ Successfully inserted {len(music_transactions)} records into staging.music_transactions")
+        print(
+            f"✅ Successfully inserted {len(music_transactions)} records into staging.music_transactions"
+        )
         print("\n✅ Data ingestion completed successfully!")
         return True
     else:

@@ -5,9 +5,7 @@ kaggle.api.authenticate()
 
 # Download the Spotify tracks dataset to the current directory
 kaggle.api.dataset_download_files(
-    'maharshipandya/-spotify-tracks-dataset',
-    path='data/external',
-    unzip=True
+    "maharshipandya/-spotify-tracks-dataset", path="data/external", unzip=True
 )
 
 # Path to downloaded dataset
