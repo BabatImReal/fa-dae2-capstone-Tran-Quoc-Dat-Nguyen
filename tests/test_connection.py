@@ -47,7 +47,7 @@ def test_postgresql_connection():
                 cur.execute("SELECT version();")
                 version = cur.fetchone()[0]
                 print("✅ Connection successful!")
-                print("📊 Version: {version}")
+                print(f"📊 Version: {version}")
 
                 # Test staging schema
                 cur.execute(
@@ -126,7 +126,7 @@ def test_snowflake_connection():
                 # Get Snowflake version
                 cur.execute("SELECT CURRENT_VERSION();")
                 version = cur.fetchone()[0]
-                print(f"✅ Connection successful!")
+                print("✅ Connection successful!")
                 print(f"📊 Version: {version}")
 
                 # Test current database and schema

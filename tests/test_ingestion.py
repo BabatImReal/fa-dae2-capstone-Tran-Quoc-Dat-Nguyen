@@ -130,7 +130,7 @@ def test_postgresql_ingestion():
 
         records_added = final_count - initial_count
         print("✅ Successfully inserted data")
-        print("📈 Final record count: {final_count} (+{records_added})")
+        print(f"📈 Final record count: {final_count} (+{records_added})")
 
         return True
 
