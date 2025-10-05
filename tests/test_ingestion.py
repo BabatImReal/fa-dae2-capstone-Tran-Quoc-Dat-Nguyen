@@ -7,7 +7,6 @@ Tests that all data pipeline connections and operations work end-to-end.
 import os
 import sys
 import json
-import tempfile
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
@@ -109,8 +108,8 @@ def test_postgresql_ingestion():
                 final_count = cur.fetchone()[0]
                 
         records_added = final_count - initial_count
-        print(f"✅ Successfully inserted data")
-        print(f"📈 Final record count: {final_count} (+{records_added})")
+        print("✅ Successfully inserted data")
+        print("📈 Final record count: {final_count} (+{records_added})")
         
         return True
         

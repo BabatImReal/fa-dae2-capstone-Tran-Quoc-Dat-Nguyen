@@ -43,8 +43,8 @@ def test_postgresql_connection():
                 # Get PostgreSQL version
                 cur.execute("SELECT version();")
                 version = cur.fetchone()[0]
-                print(f"✅ Connection successful!")
-                print(f"📊 Version: {version}")
+                print("✅ Connection successful!")
+                print("📊 Version: {version}")
                 
                 # Test staging schema
                 cur.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'staging';")
