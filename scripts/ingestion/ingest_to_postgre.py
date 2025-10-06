@@ -1,9 +1,23 @@
 import os
 import sys
 import json
+import yaml
 from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
+
+# Load configuration from YAML
+def load_config():
+    """Load configuration from YAML file."""
+    with open("config.yaml", 'r') as file:
+        return yaml.safe_load(file)
+
+config = load_config()
+
+# Use configuration values
+POSTGRES_SCHEMA = config['postgresql']['schema']
+POSTGRES_TABLE = config['postgresql']['table']
+MUSIC_TRANSACTION_COLS = config['columns']['music_transaction']
 
 # Load environment variables
 load_dotenv()
@@ -33,23 +47,7 @@ def insert_music_transactions(records):
         return False
 
     # Updated columns to match new music event data structure
-    columns = [
-        "event_id",
-        "user_id",
-        "session_id",
-        "song_id",
-        "song_title",
-        "artist",
-        "album",
-        "genre",
-        "duration_seconds",
-        "position_seconds",
-        "event_action",
-        "device_type",
-        "platform",
-        "timestamp",
-        "user_premium",
-    ]
+    columns = MUSIC_TRANSACTION_COLS
 
     # Validate that columns are safe (only contain allowed characters)
     for col in columns:
@@ -65,7 +63,7 @@ def insert_music_transactions(records):
                 
                 # Prepare the query with validated components
                 query = f"""
-                        INSERT INTO staging.music_transactions
+                        INSERT INTO {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
                         ({column_names})
                         VALUES ({placeholders})
                         ON CONFLICT (event_id) DO NOTHING
@@ -90,7 +88,7 @@ def main():
 
     # Find and load the latest music transactions file
     print("\n📁 Loading music transactions data...")
-    data_dir = Path("data/external")
+    data_dir = Path(config['paths']['data_dir'])
 
     if not data_dir.exists():
         print(f"❌ Data directory not found: {data_dir}")
@@ -126,7 +124,7 @@ def main():
     print("\n💾 Inserting data into PostgreSQL...")
     if insert_music_transactions(music_transactions):
         print(
-            f"✅ Successfully inserted {len(music_transactions)} records into staging.music_transactions"
+            f"✅ Successfully inserted {len(music_transactions)} records into {POSTGRES_SCHEMA}.{POSTGRES_TABLE}"
         )
         print("\n✅ Data ingestion completed successfully!")
         return True

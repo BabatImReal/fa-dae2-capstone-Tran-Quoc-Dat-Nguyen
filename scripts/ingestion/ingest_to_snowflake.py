@@ -1,34 +1,22 @@
 import os
 import re
+import yaml
 import snowflake.connector
 from dotenv import load_dotenv
 from pathlib import Path
 
-STAGE_FQN = "SC_RAW_DATA.CSV_STAGE"
-TABLE_FQN = "SC_RAW_DATA.raw_data"
+# Load configuration from YAML
+def load_config():
+    """Load configuration from YAML file."""
+    with open("config.yaml", 'r') as file:
+        return yaml.safe_load(file)
 
-TRACK_COLS = [
-    "track_id",
-    "artists",
-    "album_name",
-    "track_name",
-    "popularity",
-    "duration_ms",
-    "explicit",
-    "danceability",
-    "energy",
-    "key",
-    "loudness",
-    "mode",
-    "speechiness",
-    "acousticness",
-    "instrumentalness",
-    "liveness",
-    "valence",
-    "tempo",
-    "time_signature",
-    "track_genre",
-]
+config = load_config()
+
+# Use configuration values
+STAGE_FQN = config['snowflake']['stage_fqn']
+TABLE_FQN = config['snowflake']['table_fqn']
+TRACK_COLS = config['columns']['track']
 
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
@@ -148,7 +136,8 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
 
 # Main function to upload and load CSV data into Snowflake
 def main():
-    csv_path = "data/external/dataset_clean.csv"
+    # Use configuration for the CSV path
+    csv_path = f"{config['paths']['data_dir']}/{config['paths']['cleaned_dataset']}"
     if upload_csv_to_stage(csv_path):
         load_csv_to_table()
 

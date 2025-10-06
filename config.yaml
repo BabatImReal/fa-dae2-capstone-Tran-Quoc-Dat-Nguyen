@@ -1,0 +1,56 @@
+# Snowflake configuration
+snowflake:
+  stage_fqn: "SC_RAW_DATA.CSV_STAGE"
+  table_fqn: "SC_RAW_DATA.raw_data"
+  postgre_table: "SC_RAW_DATA.RAW_DATA_POSTGRE"
+
+# PostgreSQL configuration
+postgresql:
+  schema: "staging"
+  table: "music_transactions"
+
+# File paths
+paths:
+  data_dir: "data/external"
+  cleaned_dataset: "dataset_clean.csv"
+
+# Column definitions
+columns:
+  track:
+    - "track_id"
+    - "artists"
+    - "album_name"
+    - "track_name"
+    - "popularity"
+    - "duration_ms"
+    - "explicit"
+    - "danceability"
+    - "energy"
+    - "key"
+    - "loudness"
+    - "mode"
+    - "speechiness"
+    - "acousticness"
+    - "instrumentalness"
+    - "liveness"
+    - "valence"
+    - "tempo"
+    - "time_signature"
+    - "track_genre"
+  music_transaction:
+    - "event_id"
+    - "user_id"
+    - "session_id"
+    - "song_id"
+    - "song_title"
+    - "artist"
+    - "album"
+    - "genre"
+    - "duration_seconds"
+    - "position_seconds"
+    - "event_action"
+    - "device_type"
+    - "platform"
+    - "timestamp"
+    - "user_premium"
+    - "ingested_at"

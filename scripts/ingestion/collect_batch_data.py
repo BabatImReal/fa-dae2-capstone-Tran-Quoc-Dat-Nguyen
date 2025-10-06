@@ -1,8 +1,21 @@
 import kaggle
 import pandas as pd
+import yaml
 from pathlib import Path
 
-def sanitize_file_path(file_path, base_dir="data/external"):
+# Load configuration from YAML
+def load_config():
+    """Load configuration from YAML file."""
+    with open("config.yaml", 'r') as file:
+        return yaml.safe_load(file)
+
+config = load_config()
+
+# Use configuration values
+DATA_DIR = config['paths']['data_dir']
+BATCH_DATASET = config['paths']['cleaned_dataset']
+
+def sanitize_file_path(file_path, base_dir=DATA_DIR):
     """Sanitize file paths to prevent path traversal."""
     # Convert to Path object and resolve
     base_path = Path(base_dir).resolve()
@@ -14,16 +27,17 @@ def sanitize_file_path(file_path, base_dir="data/external"):
     
     return target_path
 
+# Use configuration for Kaggle dataset name
 kaggle.api.authenticate()
 
 # Download the Spotify tracks dataset to the current directory
 kaggle.api.dataset_download_files(
-    "maharshipandya/-spotify-tracks-dataset", path="data/external", unzip=True
+    "maharshipandya/-spotify-tracks-dataset", path=DATA_DIR, unzip=True
 )
 
 # Path to downloaded dataset - sanitized
-dataset_path = sanitize_file_path("dataset.csv")
-cleaned_path = sanitize_file_path("dataset_clean.csv")
+dataset_path = sanitize_file_path(config['paths']['batch_dataset'])
+cleaned_path = sanitize_file_path(BATCH_DATASET)
 
 # Load dataset
 df = pd.read_csv(dataset_path)
