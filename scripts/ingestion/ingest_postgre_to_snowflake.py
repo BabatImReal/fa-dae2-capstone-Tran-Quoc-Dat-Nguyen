@@ -1,10 +1,24 @@
 import os
 import re
+import yaml
 import psycopg
 import pandas as pd
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
 from dotenv import load_dotenv
+
+# Load configuration from YAML
+def load_config():
+    """Load configuration from YAML file."""
+    with open("config.yaml", 'r') as file:
+        return yaml.safe_load(file)
+
+config = load_config()
+
+# Use configuration values
+SNOWFLAKE_POSTGRE_TABLE = config['snowflake']['postgre_table']
+POSTGRES_SCHEMA = config['postgresql']['schema']
+POSTGRES_TABLE = config['postgresql']['table']
 
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
@@ -13,7 +27,7 @@ def sanitize_identifier(identifier):
     return identifier
 
 def load_postgres_to_snowflake():
-    """Incrementally extract data from PostgreSQL and load into Snowflake (SC_RAW_DATA.raw_data_postgre)."""
+    """Incrementally extract data from PostgreSQL and load into Snowflake."""
     load_dotenv()
 
     # -------------------------------
@@ -35,7 +49,7 @@ def load_postgres_to_snowflake():
     # Use row count comparison instead of timestamp to avoid conversion issues
     try:
         # Sanitize table name
-        table_name = sanitize_identifier("SC_RAW_DATA.RAW_DATA_POSTGRE")
+        table_name = sanitize_identifier(SNOWFLAKE_POSTGRE_TABLE)
         
         # Get count of records in Snowflake
         cur.execute(f"SELECT COUNT(*) FROM {table_name};")
@@ -44,7 +58,7 @@ def load_postgres_to_snowflake():
 
     except snowflake.connector.errors.ProgrammingError as e:
         if "does not exist" in str(e).lower():
-            print("⚠️ Table SC_RAW_DATA.RAW_DATA_POSTGRE does not exist yet")
+            print(f"⚠️ Table {SNOWFLAKE_POSTGRE_TABLE} does not exist yet")
             sf_row_count = 0
         else:
             print(f"⚠️ Error querying Snowflake table: {e}")
@@ -66,7 +80,7 @@ def load_postgres_to_snowflake():
     )
 
     # Build query to get all data from PostgreSQL (we'll filter after loading)
-    query = """
+    query = f"""
         SELECT 
             event_id,
             user_id,
@@ -84,7 +98,7 @@ def load_postgres_to_snowflake():
             "timestamp" AS event_timestamp,   -- reserved word
             user_premium,
             ingested_at
-        FROM staging.music_transactions
+        FROM {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
         ORDER BY ingested_at
     """
 
@@ -157,7 +171,7 @@ def load_postgres_to_snowflake():
             schema="SC_RAW_DATA",
         )
         print(
-            f"✅ Loaded {nrows} new records into Snowflake table SC_RAW_DATA.raw_data_postgre"
+            f"✅ Loaded {nrows} new records into Snowflake table {SNOWFLAKE_POSTGRE_TABLE}"
         )
 
     except Exception as e:

@@ -1,11 +1,23 @@
 # scripts/data_collection/fake_data_generator.py
 import json
 import csv
+import yaml
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 
 from faker import Faker
+
+# Load configuration from YAML
+def load_config():
+    """Load configuration from YAML file."""
+    with open("config.yaml", 'r') as file:
+        return yaml.safe_load(file)
+
+config = load_config()
+
+# Use configuration values
+DATA_DIR = config['paths']['data_dir']
 
 
 class FakeDataGenerator:
@@ -17,7 +29,7 @@ class FakeDataGenerator:
         )  # Use microseconds for more uniqueness
         self.fake = Faker()
         self.fake.seed_instance(seed)
-        self.data_dir = Path("data/external")
+        self.data_dir = Path(DATA_DIR)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def sanitize_file_path(self, file_path):
