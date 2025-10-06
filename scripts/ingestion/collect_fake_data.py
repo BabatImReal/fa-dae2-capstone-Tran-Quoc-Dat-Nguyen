@@ -1,11 +1,14 @@
 # scripts/data_collection/fake_data_generator.py
-import json
+
+# Standard library imports
 import csv
-import yaml
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 
+# Third-party imports
+import yaml
 from faker import Faker
 
 # Load configuration from YAML

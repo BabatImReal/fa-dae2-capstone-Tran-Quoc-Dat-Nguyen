@@ -1,9 +1,12 @@
+# Standard library imports
 import os
 import re
-import yaml
-import snowflake.connector
-from dotenv import load_dotenv
 from pathlib import Path
+
+# Third-party imports
+import snowflake.connector
+import yaml
+from dotenv import load_dotenv
 
 # Load configuration from YAML
 def load_config():

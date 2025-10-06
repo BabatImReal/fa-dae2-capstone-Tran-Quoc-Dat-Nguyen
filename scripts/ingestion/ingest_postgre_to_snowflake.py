@@ -1,11 +1,14 @@
+# Standard library imports
 import os
 import re
-import yaml
-import psycopg
+
+# Third-party imports
 import pandas as pd
+import psycopg
 import snowflake.connector
-from snowflake.connector.pandas_tools import write_pandas
+import yaml
 from dotenv import load_dotenv
+from snowflake.connector.pandas_tools import write_pandas
 
 # Load configuration from YAML
 def load_config():

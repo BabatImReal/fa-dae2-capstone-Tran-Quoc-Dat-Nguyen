@@ -1,9 +1,12 @@
+# Standard library imports
+import json
 import os
 import sys
-import json
-import yaml
 from pathlib import Path
+
+# Third-party imports
 import psycopg
+import yaml
 from dotenv import load_dotenv
 
 # Load configuration from YAML
