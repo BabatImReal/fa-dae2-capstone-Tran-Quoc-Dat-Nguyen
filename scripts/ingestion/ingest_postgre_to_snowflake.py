@@ -119,7 +119,8 @@ def load_postgres_to_snowflake():
     logger.info(f"📊 Total records in PostgreSQL: {len(df)}")
     if not df.empty:
         logger.info(
-            f"📅 PostgreSQL data range: {df['ingested_at'].min()} to {df['ingested_at'].max()}"
+            f"📅 PostgreSQL data range: {df['ingested_at'].min()} to "
+            f"{df['ingested_at'].max()}"
         )
 
     if df.empty:
@@ -148,17 +149,20 @@ def load_postgres_to_snowflake():
         df = df.iloc[sf_row_count:].copy().reset_index(drop=True)
         logger.info(f"🔍 Incremental load: skipping first {sf_row_count} records")
         logger.info(
-            f"📊 Loading records {sf_row_count + 1} to {pg_total_records} ({len(df)} new records)"
+            f"📊 Loading records {sf_row_count + 1} to {pg_total_records} "
+            f"({len(df)} new records)"
         )
     elif sf_row_count >= pg_total_records:
         logger.info(
-            f"👌 Snowflake already has {sf_row_count} records, PostgreSQL has {pg_total_records}. Nothing to load."
+            f"👌 Snowflake already has {sf_row_count} records, PostgreSQL has "
+            f"{pg_total_records}. Nothing to load."
         )
         sf_conn.close()
         return
     else:
         logger.info(
-            f"📋 Full load: Snowflake has {sf_row_count} records, loading all {pg_total_records} from PostgreSQL"
+            f"📋 Full load: Snowflake has {sf_row_count} records, loading all "
+            f"{pg_total_records} from PostgreSQL"
         )
 
     # Rename columns to uppercase for Snowflake compatibility
@@ -182,7 +186,8 @@ def load_postgres_to_snowflake():
             schema="SC_RAW_DATA",
         )
         logger.info(
-            f"✅ Loaded {nrows} new records into Snowflake table {SNOWFLAKE_POSTGRE_TABLE}"
+            f"✅ Loaded {nrows} new records into Snowflake table "
+            f"{SNOWFLAKE_POSTGRE_TABLE}"
         )
 
     except Exception as e:

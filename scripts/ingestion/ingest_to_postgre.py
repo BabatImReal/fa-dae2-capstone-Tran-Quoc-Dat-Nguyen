@@ -135,7 +135,8 @@ def main():
     logger.info("💾 Inserting data into PostgreSQL...")
     if insert_music_transactions(music_transactions):
         logger.info(
-            f"✅ Successfully inserted {len(music_transactions)} records into {POSTGRES_SCHEMA}.{POSTGRES_TABLE}"
+            f"✅ Successfully inserted {len(music_transactions)} records into "
+            f"{POSTGRES_SCHEMA}.{POSTGRES_TABLE}"
         )
         logger.info("✅ Data ingestion completed successfully!")
         return True
