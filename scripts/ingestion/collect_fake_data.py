@@ -3,6 +3,7 @@
 # Standard library imports
 import csv
 import json
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
@@ -10,6 +11,13 @@ from typing import Dict, List
 # Third-party imports
 import yaml
 from faker import Faker
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Load configuration from YAML
 def load_config():
@@ -229,6 +237,7 @@ class FakeDataGenerator:
         file_path = self.sanitize_file_path(f"{clean_filename}_{timestamp}.json")
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.info(f"Saved {len(data)} records to {file_path}")
         return file_path
 
     # Save data as a CSV file
@@ -243,6 +252,7 @@ class FakeDataGenerator:
             writer = csv.DictWriter(f, fieldnames=data[0].keys())
             writer.writeheader()
             writer.writerows(data)
+        logger.info(f"Saved {len(data)} records to {file_path}")
         return file_path
 
 
@@ -262,10 +272,10 @@ def main():
         generator.save_data_as_json(users, "fake_users")
         generator.save_data_as_json(music_transactions, "fake_music_transactions")
 
-        print("Fake data generation completed successfully!")
+        logger.info("Fake data generation completed successfully!")
 
     except Exception as e:
-        print(f"Fake data generation failed: {e}")
+        logger.error(f"Fake data generation failed: {e}")
         raise
 
 

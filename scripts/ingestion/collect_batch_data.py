@@ -1,10 +1,18 @@
 # Standard library imports
+import logging
 from pathlib import Path
 
 # Third-party imports
 import kaggle
 import pandas as pd
 import yaml
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Load configuration from YAML
 def load_config():
@@ -52,5 +60,5 @@ if df.columns[0].startswith("Unnamed") or df.columns[0] == "0":
 # Save cleaned dataset
 df.to_csv(cleaned_path, index=False)
 
-print(f"Cleaned dataset saved to {cleaned_path}")
+logger.info(f"Cleaned dataset saved to {cleaned_path}")
 print(df.head())

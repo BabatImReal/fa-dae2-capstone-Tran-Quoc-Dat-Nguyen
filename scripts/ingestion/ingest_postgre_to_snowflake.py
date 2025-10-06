@@ -1,4 +1,5 @@
 # Standard library imports
+import logging
 import os
 import re
 
@@ -9,6 +10,13 @@ import snowflake.connector
 import yaml
 from dotenv import load_dotenv
 from snowflake.connector.pandas_tools import write_pandas
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Load configuration from YAML
 def load_config():
@@ -57,17 +65,17 @@ def load_postgres_to_snowflake():
         # Get count of records in Snowflake
         cur.execute(f"SELECT COUNT(*) FROM {table_name};")
         sf_row_count = cur.fetchone()[0]
-        print(f"📊 Snowflake table has {sf_row_count} records")
+        logger.info(f"📊 Snowflake table has {sf_row_count} records")
 
     except snowflake.connector.errors.ProgrammingError as e:
         if "does not exist" in str(e).lower():
-            print(f"⚠️ Table {SNOWFLAKE_POSTGRE_TABLE} does not exist yet")
+            logger.warning(f"Table {SNOWFLAKE_POSTGRE_TABLE} does not exist yet")
             sf_row_count = 0
         else:
-            print(f"⚠️ Error querying Snowflake table: {e}")
+            logger.error(f"Error querying Snowflake table: {e}")
             sf_row_count = 0
     except Exception as e:
-        print(f"⚠️ Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         sf_row_count = 0
     cur.close()
 
@@ -108,14 +116,14 @@ def load_postgres_to_snowflake():
     df = pd.read_sql_query(query, pg_conn)
     pg_conn.close()
 
-    print(f"📊 Total records in PostgreSQL: {len(df)}")
+    logger.info(f"📊 Total records in PostgreSQL: {len(df)}")
     if not df.empty:
-        print(
+        logger.info(
             f"📅 PostgreSQL data range: {df['ingested_at'].min()} to {df['ingested_at'].max()}"
         )
 
     if df.empty:
-        print("👌 No new data to ingest")
+        logger.info("👌 No new data to ingest")
         sf_conn.close()
         return
 
@@ -138,18 +146,18 @@ def load_postgres_to_snowflake():
     if sf_row_count > 0 and sf_row_count < pg_total_records:
         # Skip the first sf_row_count records (already in Snowflake)
         df = df.iloc[sf_row_count:].copy().reset_index(drop=True)
-        print(f"🔍 Incremental load: skipping first {sf_row_count} records")
-        print(
+        logger.info(f"🔍 Incremental load: skipping first {sf_row_count} records")
+        logger.info(
             f"📊 Loading records {sf_row_count + 1} to {pg_total_records} ({len(df)} new records)"
         )
     elif sf_row_count >= pg_total_records:
-        print(
+        logger.info(
             f"👌 Snowflake already has {sf_row_count} records, PostgreSQL has {pg_total_records}. Nothing to load."
         )
         sf_conn.close()
         return
     else:
-        print(
+        logger.info(
             f"📋 Full load: Snowflake has {sf_row_count} records, loading all {pg_total_records} from PostgreSQL"
         )
 
@@ -157,11 +165,11 @@ def load_postgres_to_snowflake():
     df.columns = [c.upper() for c in df.columns]
 
     if df.empty:
-        print("👌 No new data to ingest")
+        logger.info("👌 No new data to ingest")
         sf_conn.close()
         return
 
-    print(f"✅ Processing {len(df)} new records for Snowflake load")
+    logger.info(f"✅ Processing {len(df)} new records for Snowflake load")
 
     # -------------------------------
     # Load into Snowflake
@@ -173,12 +181,12 @@ def load_postgres_to_snowflake():
             "RAW_DATA_POSTGRE",
             schema="SC_RAW_DATA",
         )
-        print(
+        logger.info(
             f"✅ Loaded {nrows} new records into Snowflake table {SNOWFLAKE_POSTGRE_TABLE}"
         )
 
     except Exception as e:
-        print(f"❌ Loading failed: {e}")
+        logger.error(f"Loading failed: {e}")
     finally:
         sf_conn.close()
 

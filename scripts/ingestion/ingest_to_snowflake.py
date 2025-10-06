@@ -1,4 +1,5 @@
 # Standard library imports
+import logging
 import os
 import re
 from pathlib import Path
@@ -7,6 +8,13 @@ from pathlib import Path
 import snowflake.connector
 import yaml
 from dotenv import load_dotenv
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Load configuration from YAML
 def load_config():
@@ -70,17 +78,17 @@ def get_conn():
 # Upload a CSV file to the Snowflake stage
 def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
     if not csv_file_path:
-        print("❌ CSV_PATH not set.")
+        logger.error("CSV_PATH not set.")
         return False
     
     # Sanitize the file path
     try:
         abs_path = sanitize_file_path(csv_file_path)
         if not os.path.isfile(abs_path):
-            print(f"❌ File not found: {abs_path}")
+            logger.error(f"File not found: {abs_path}")
             return False
     except ValueError as e:
-        print(f"❌ {e}")
+        logger.error(f"Invalid file path: {e}")
         return False
     
     stage_fqn = sanitize_identifier(STAGE_FQN)
@@ -92,10 +100,10 @@ def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(put_sql)
         for r in cur.fetchall():
-            print(f"✅ PUT {r[0]} -> {r[1]} [{r[6]}]")
+            logger.info(f"PUT {r[0]} -> {r[1]} [{r[6]}]")
         cur.execute(f"LIST @{stage_fqn}")
         listed = cur.fetchall()
-        print(f"📄 Files in stage: {len(listed)}")
+        logger.info(f"📄 Files in stage: {len(listed)}")
     return True
 
 
@@ -125,15 +133,15 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
         cur.execute(copy_sql, (pattern,))
         rows = cur.fetchall()
         if rows and len(rows[0]) == 1:
-            print(f"⚠️ {rows[0][0]}")
+            logger.warning(f"{rows[0][0]}")
         else:
             loaded = sum(
                 1 for r in rows if len(r) > 1 and str(r[1]).upper() == "LOADED"
             )
-            print(f"✅ COPY files loaded: {loaded}")
+            logger.info(f"✅ COPY files loaded: {loaded}")
         cur.execute(f"SELECT COUNT(*) FROM {table_fqn}")
         total = cur.fetchone()[0]
-        print(f"📊 Row count: {total}")
+        logger.info(f"📊 Row count: {total}")
     return True
 
 
