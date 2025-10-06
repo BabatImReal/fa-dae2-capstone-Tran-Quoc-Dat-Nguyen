@@ -1,6 +1,8 @@
 import os
+import re
 import snowflake.connector
 from dotenv import load_dotenv
+from pathlib import Path
 
 STAGE_FQN = "SC_RAW_DATA.CSV_STAGE"
 TABLE_FQN = "SC_RAW_DATA.raw_data"
@@ -28,6 +30,30 @@ TRACK_COLS = [
     "track_genre",
 ]
 
+def sanitize_identifier(identifier):
+    """Sanitize SQL identifiers to prevent injection."""
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$', identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
+
+def sanitize_file_path(file_path, base_dir=None):
+    """Sanitize file paths to prevent path traversal."""
+    # If base_dir is provided, ensure file_path is within it
+    if base_dir:
+        base_path = Path(base_dir).resolve()
+        target_path = Path(file_path).resolve()
+        
+        # Ensure the target path is within the base directory
+        if not str(target_path).startswith(str(base_path)):
+            raise ValueError(f"Invalid file path: {file_path}")
+        
+        return str(target_path)
+    
+    # For absolute paths, just normalize and check for dangerous patterns
+    normalized = os.path.normpath(file_path)
+    if ".." in normalized:
+        raise ValueError(f"Invalid file path: {file_path}")
+    return normalized
 
 # Get a Snowflake database connection using environment variables
 def get_conn():
@@ -55,18 +81,28 @@ def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
     if not csv_file_path:
         print("❌ CSV_PATH not set.")
         return False
-    if not os.path.isfile(csv_file_path):
-        print(f"❌ File not found: {csv_file_path}")
+    
+    # Sanitize the file path
+    try:
+        abs_path = sanitize_file_path(csv_file_path)
+        if not os.path.isfile(abs_path):
+            print(f"❌ File not found: {abs_path}")
+            return False
+    except ValueError as e:
+        print(f"❌ {e}")
         return False
-    abs_path = os.path.abspath(csv_file_path)
-    put_sql = f"PUT file://{abs_path} @{STAGE_FQN}" + (
+    
+    stage_fqn = sanitize_identifier(STAGE_FQN)
+    
+    # Construct the PUT command safely
+    put_sql = f"PUT file://{abs_path} @{stage_fqn}" + (
         " OVERWRITE=TRUE" if overwrite else ""
     )
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(put_sql)
         for r in cur.fetchall():
             print(f"✅ PUT {r[0]} -> {r[1]} [{r[6]}]")
-        cur.execute(f"LIST @{STAGE_FQN}")
+        cur.execute(f"LIST @{stage_fqn}")
         listed = cur.fetchall()
         print(f"📄 Files in stage: {len(listed)}")
     return True
@@ -74,12 +110,16 @@ def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
 
 # Load CSV data from the stage into the Snowflake table
 def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
+    # Sanitize inputs
+    table_fqn = sanitize_identifier(TABLE_FQN)
+    stage_fqn = sanitize_identifier(STAGE_FQN)
+    
     columns_sql = ", ".join(TRACK_COLS)
     copy_sql = f"""
-    COPY INTO {TABLE_FQN} (
+    COPY INTO {table_fqn} (
         {columns_sql}
     )
-    FROM @{STAGE_FQN}
+    FROM @{stage_fqn}
     FILE_FORMAT = (
         TYPE=CSV
         FIELD_DELIMITER=','
@@ -87,11 +127,11 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
         SKIP_HEADER=1
         NULL_IF=('','NULL')
     )
-    PATTERN = '{pattern}'
+    PATTERN = %s
     ON_ERROR = 'ABORT_STATEMENT'
     """
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute(copy_sql)
+        cur.execute(copy_sql, (pattern,))
         rows = cur.fetchall()
         if rows and len(rows[0]) == 1:
             print(f"⚠️ {rows[0][0]}")
@@ -100,7 +140,7 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
                 1 for r in rows if len(r) > 1 and str(r[1]).upper() == "LOADED"
             )
             print(f"✅ COPY files loaded: {loaded}")
-        cur.execute(f"SELECT COUNT(*) FROM {TABLE_FQN}")
+        cur.execute(f"SELECT COUNT(*) FROM {table_fqn}")
         total = cur.fetchone()[0]
         print(f"📊 Row count: {total}")
     return True
@@ -108,7 +148,7 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
 
 # Main function to upload and load CSV data into Snowflake
 def main():
-    csv_path = "data\external\dataset_clean.csv"
+    csv_path = "data/external/dataset_clean.csv"
     if upload_csv_to_stage(csv_path):
         load_csv_to_table()
 

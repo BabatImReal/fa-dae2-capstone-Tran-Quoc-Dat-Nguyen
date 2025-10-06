@@ -20,6 +20,18 @@ class FakeDataGenerator:
         self.data_dir = Path("data/external")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+    def sanitize_file_path(self, file_path):
+        """Sanitize file paths to prevent path traversal."""
+        # Convert to Path object and resolve
+        base_path = self.data_dir.resolve()
+        target_path = (base_path / file_path).resolve()
+        
+        # Ensure the target path is within the base directory
+        if not str(target_path).startswith(str(base_path)):
+            raise ValueError(f"Invalid file path: {file_path}")
+        
+        return target_path
+
     # Generate a list of fake user records
     def generate_user_data(self, count: int = 100) -> List[Dict]:
         """Generate fake user data."""
@@ -196,8 +208,10 @@ class FakeDataGenerator:
     # Save data as a JSON file with a timestamped filename
     def save_data_as_json(self, data: List[Dict], filename: str) -> Path:
         """Save data to a new JSON file with a timestamp in the filename."""
+        # Sanitize filename to prevent path traversal
+        clean_filename = Path(filename).name
         timestamp = datetime.utcnow().strftime("%Y_%m_%d_%H_%M")
-        file_path = self.data_dir / f"{filename}_{timestamp}.json"
+        file_path = self.sanitize_file_path(f"{clean_filename}_{timestamp}.json")
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return file_path
@@ -207,7 +221,9 @@ class FakeDataGenerator:
         """Save data to CSV file."""
         if not data:
             raise ValueError("No data to save.")
-        file_path = self.data_dir / f"{filename}.csv"
+        # Sanitize filename to prevent path traversal
+        clean_filename = Path(filename).name
+        file_path = self.sanitize_file_path(f"{clean_filename}.csv")
         with open(file_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=data[0].keys())
             writer.writeheader()
