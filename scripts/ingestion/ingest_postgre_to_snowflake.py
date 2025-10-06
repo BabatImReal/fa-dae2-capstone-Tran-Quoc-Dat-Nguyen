@@ -1,10 +1,16 @@
 import os
+import re
 import psycopg
 import pandas as pd
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
 from dotenv import load_dotenv
 
+def sanitize_identifier(identifier):
+    """Sanitize SQL identifiers to prevent injection."""
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$', identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
 
 def load_postgres_to_snowflake():
     """Incrementally extract data from PostgreSQL and load into Snowflake (SC_RAW_DATA.raw_data_postgre)."""
@@ -28,8 +34,11 @@ def load_postgres_to_snowflake():
     cur = sf_conn.cursor()
     # Use row count comparison instead of timestamp to avoid conversion issues
     try:
+        # Sanitize table name
+        table_name = sanitize_identifier("SC_RAW_DATA.RAW_DATA_POSTGRE")
+        
         # Get count of records in Snowflake
-        cur.execute("SELECT COUNT(*) FROM SC_RAW_DATA.RAW_DATA_POSTGRE;")
+        cur.execute(f"SELECT COUNT(*) FROM {table_name};")
         sf_row_count = cur.fetchone()[0]
         print(f"📊 Snowflake table has {sf_row_count} records")
 

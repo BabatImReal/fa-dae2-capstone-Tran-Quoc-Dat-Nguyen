@@ -1,5 +1,3 @@
-# If you see import errors, install psycopg2 with: pip install psycopg2-binary
-
 import os
 import sys
 import json
@@ -53,22 +51,30 @@ def insert_music_transactions(records):
         "user_premium",
     ]
 
+    # Validate that columns are safe (only contain allowed characters)
+    for col in columns:
+        if not col.replace('_', '').isalnum():
+            raise ValueError(f"Invalid column name: {col}")
+
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
+                # Prepare the column names and placeholders safely
+                column_names = ", ".join(columns)
+                placeholders = ", ".join(["%s"] * len(columns))
+                
+                # Prepare the query with validated components
+                query = f"""
+                        INSERT INTO staging.music_transactions
+                        ({column_names})
+                        VALUES ({placeholders})
+                        ON CONFLICT (event_id) DO NOTHING
+                        """
+                
                 for record in records:
                     # Extract values in the correct order, handling missing fields gracefully
                     values = tuple(record.get(col) for col in columns)
-
-                    cur.execute(
-                        f"""
-                        INSERT INTO staging.music_transactions
-                        ({", ".join(columns)})
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (event_id) DO NOTHING
-                        """,
-                        values,
-                    )
+                    cur.execute(query, values)
             conn.commit()
         return True
     except Exception as e:

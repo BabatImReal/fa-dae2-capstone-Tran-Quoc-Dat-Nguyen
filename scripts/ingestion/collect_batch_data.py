@@ -1,5 +1,18 @@
 import kaggle
 import pandas as pd
+from pathlib import Path
+
+def sanitize_file_path(file_path, base_dir="data/external"):
+    """Sanitize file paths to prevent path traversal."""
+    # Convert to Path object and resolve
+    base_path = Path(base_dir).resolve()
+    target_path = (base_path / file_path).resolve()
+    
+    # Ensure the target path is within the base directory
+    if not str(target_path).startswith(str(base_path)):
+        raise ValueError(f"Invalid file path: {file_path}")
+    
+    return target_path
 
 kaggle.api.authenticate()
 
@@ -8,9 +21,9 @@ kaggle.api.dataset_download_files(
     "maharshipandya/-spotify-tracks-dataset", path="data/external", unzip=True
 )
 
-# Path to downloaded dataset
-dataset_path = "data/external/dataset.csv"
-cleaned_path = "data/external/dataset_clean.csv"
+# Path to downloaded dataset - sanitized
+dataset_path = sanitize_file_path("dataset.csv")
+cleaned_path = sanitize_file_path("dataset_clean.csv")
 
 # Load dataset
 df = pd.read_csv(dataset_path)
