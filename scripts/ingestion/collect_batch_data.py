@@ -1,7 +1,10 @@
+# Standard library imports
+from pathlib import Path
+
+# Third-party imports
 import kaggle
 import pandas as pd
 import yaml
-from pathlib import Path
 
 # Load configuration from YAML
 def load_config():
