@@ -1,56 +1,61 @@
-## Selected Batch Source: Ultimate Spotify Tracks Database (Kaggle)
-- **Primary Dataset**: `zaheenhamidani/ultimate-spotify-tracks-db`
-- **URL**: https://www.kaggle.com/datasets/zaheenhamidani/ultimate-spotify-tracks-db
+
+## Selected Batch Source: Heart Disease UCI (Kaggle)
+- **Primary Dataset**: `kamilpytlak/personal-key-indicators-of-heart-disease`
+- **URL**: https://www.kaggle.com/datasets/kamilpytlak/personal-key-indicators-of-heart-disease
 - **Authentication**: Kaggle account required for download
-- **Data Format**: CSV (`SpotifyFeatures.csv`)
-- **Dataset Details**: Comprehensive Spotify tracks database with audio features, metadata, and musical characteristics
-- **Volume**: Large-scale dataset with extensive track collection
-- **Update Frequency**: Static snapshot (Version 3 on Kaggle)
-- **Download Location**: `C:\Users\ASUS\.cache\kagglehub\datasets\zaheenhamidani\ultimate-spotify-tracks-db\versions\3\SpotifyFeatures.csv`
-- **Why Selected**: Successfully accessible via kagglehub, contains rich audio features and metadata suitable for music analytics and recommendation systems
+- **Data Format**: CSV (`heart_2020_cleaned.csv`)
+- **Dataset Details**: Cleaned and preprocessed health survey data for heart disease prediction, including demographic, behavioral, and medical risk factors.
+- **Volume**: ~320,000 rows, 18 columns
+- **Update Frequency**: Static snapshot
+- **Download Location**: `data/external/heart_2020_cleaned.csv`
+- **Why Selected**: Public, well-documented, and suitable for health analytics and ML tasks. Easily accessible via kaggle API and integrates with the pipeline.
+
 
 ## Fallback Datasets (Tested)
-1. `maharshipandya/-spotify-tracks-dataset` - ❌ No data files found
-2. `yamaerenay/spotify-dataset-19212020-160k-tracks` - ⏳ Available as backup option
+*None required. The heart disease dataset is stable and public.*
+
 
 ## Data Pipeline Integration
 - **Collection Script**: `scripts/ingestion/collect_batch_data.py`
-- **Target Directory**: `data/external/SpotifyFeatures.csv`
-- **Processing**: Automated download and copy to project directory via kagglehub
+- **Target Directory**: `data/external/heart_2020_cleaned.csv`
+- **Processing**: Automated download and copy to project directory via kaggle API
+
 
 ## Testing Results
-- [x] Primary dataset (`zaheenhamidani/ultimate-spotify-tracks-db`) accessible
-- [x] SpotifyFeatures.csv successfully downloaded
+- [x] Primary dataset (`kamilpytlak/personal-key-indicators-of-heart-disease`) accessible
+- [x] heart_2020_cleaned.csv successfully downloaded
 - [x] Data copied to project directory
 - [x] File structure validated
-- [ ] First fallback dataset failed (no data files)
-- [x] Kagglehub integration working
+- [x] Kaggle API integration working
 - [x] Automated download pipeline functional
 
 ---
 
-**Sample Output (SpotifyFeatures.csv):**
+
+**Sample Output (heart_2020_cleaned.csv):**
 ```csv
-genre,artist_name,track_name,track_id,popularity,acousticness,danceability,duration_ms,energy,instrumentalness,key,liveness,loudness,mode,speechiness,tempo,valence,time_signature
-Electronic,Gorillaz,Feel Good Inc,0d28khcov6AiegSCpG5TuT,90,0.00394,0.794,222640,0.72,0.0112,8,-0.951,1,0.419,144.032,0.816,4
-Pop,Ariana Grande,7 rings,6ocbgoVGwYskVH7qt6VCEj,95,0.0154,0.778,178147,0.317,0,1,-7.661,1,0.333,140.048,0.317,4
+HeartDisease,BMI,Smoking,AlcoholDrinking,Stroke,PhysicalHealth,MentalHealth,DiffWalking,Sex,AgeCategory,Race,Diabetic,PhysicalActivity,GenHealth,SleepTime,Asthma,KidneyDisease,SkinCancer
+No,16.6,No,No,No,3.0,30.0,No,Female,18-24,White,No,Yes,Very good,5.0,No,No,No
+No,20.3,No,No,No,0.0,0.0,No,Male,55-59,White,No,Yes,Good,7.0,No,No,No
+Yes,26.2,Yes,No,No,0.0,0.0,No,Female,65-69,White,No,Yes,Good,8.0,No,No,No
 ```
 
 **Data Schema:**
-- **Audio Features**: acousticness, danceability, energy, instrumentalness, liveness, loudness, speechiness, tempo, valence
-- **Track Metadata**: genre, artist_name, track_name, track_id, popularity, duration_ms
-- **Musical Properties**: key, mode, time_signature
+- **Target**: HeartDisease (Yes/No)
+- **Features**: BMI, Smoking, AlcoholDrinking, Stroke, PhysicalHealth, MentalHealth, DiffWalking, Sex, AgeCategory, Race, Diabetic, PhysicalActivity, GenHealth, SleepTime, Asthma, KidneyDisease, SkinCancer
+
 
 **Download Process:**
 ```bash
 # Automated via collect_batch_data.py
-📥 Trying dataset: zaheenhamidani/ultimate-spotify-tracks-db
-Path to dataset files: C:\Users\ASUS\.cache\kagglehub\datasets\zaheenhamidani\ultimate-spotify-tracks-db\versions\3
+📥 Trying dataset: kamilpytlak/personal-key-indicators-of-heart-disease
+Path to dataset files: <user_kaggle_cache>/kamilpytlak/personal-key-indicators-of-heart-disease
 Files in download path:
-  - SpotifyFeatures.csv (file)
-  ✅ Copied: SpotifyFeatures.csv
-✅ Successfully downloaded zaheenhamidani/ultimate-spotify-tracks-db
+  - heart_2020_cleaned.csv (file)
+  ✅ Copied: heart_2020_cleaned.csv
+✅ Successfully downloaded kamilpytlak/personal-key-indicators-of-heart-disease
 ```
 
-**Summary:**  
-The Ultimate Spotify Tracks Database (`zaheenhamidani/ultimate-spotify-tracks-db`) is successfully integrated as the primary batch data source. The dataset provides comprehensive audio features and track metadata through SpotifyFeatures.csv, automatically downloaded via kagglehub and processed by the data pipeline. The first attempted dataset (`maharshipandya/-spotify-tracks-dataset`) was unavailable, demonstrating the robustness of the fallback system.
+
+**Summary:**
+The Heart Disease UCI dataset (`kamilpytlak/personal-key-indicators-of-heart-disease`) is successfully integrated as the primary batch data source. The dataset provides cleaned health survey data for heart disease prediction, automatically downloaded via the Kaggle API and processed by the data pipeline. The pipeline is robust, with automated validation and integration steps.

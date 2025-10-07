@@ -28,7 +28,7 @@ config = load_config()
 # Use configuration values
 POSTGRES_SCHEMA = config['postgresql']['schema']
 POSTGRES_TABLE = config['postgresql']['table']
-MUSIC_TRANSACTION_COLS = config['columns']['music_transaction']
+HOSPITAL_TRANSACTION_COLS = config['columns']['hospital_transaction']
 
 # Load environment variables
 load_dotenv()
@@ -48,19 +48,16 @@ def get_connection():
 
 
 # Insert a list of music event records into the staging.music_transactions table
-def insert_music_transactions(records):
+
+def insert_hospital_transactions(records):
     """
-    Insert a list of music event dicts into staging.music_transactions.
-    Handles the new music event structure with event_action, session_id, etc.
+    Insert a list of hospital transaction dicts into staging.hospital_transactions.
     Returns True if successful, False otherwise.
     """
     if not records:
         return False
 
-    # Updated columns to match new music event data structure
-    columns = MUSIC_TRANSACTION_COLS
-
-    # Validate that columns are safe (only contain allowed characters)
+    columns = HOSPITAL_TRANSACTION_COLS
     for col in columns:
         if not col.replace('_', '').isalnum():
             raise ValueError(f"Invalid column name: {col}")
@@ -68,47 +65,43 @@ def insert_music_transactions(records):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                # Prepare the column names and placeholders safely
                 column_names = ", ".join(columns)
                 placeholders = ", ".join(["%s"] * len(columns))
-                
-                # Prepare the query with validated components
                 query = f"""
                         INSERT INTO {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
                         ({column_names})
                         VALUES ({placeholders})
-                        ON CONFLICT (event_id) DO NOTHING
+                        ON CONFLICT (transaction_id) DO NOTHING
                         """
-                
                 for record in records:
-                    # Extract values in the correct order, handling missing fields gracefully
                     values = tuple(record.get(col) for col in columns)
                     cur.execute(query, values)
             conn.commit()
         return True
     except Exception as e:
-        logger.error(f"Error inserting music transactions: {e}")
+        logger.error(f"Error inserting hospital transactions: {e}")
         return False
 
 
 # Main function to load and insert music transactions into PostgreSQL
+
 def main():
-    """Main function to load and insert music transactions into PostgreSQL."""
+    """Main function to load and insert hospital transactions into PostgreSQL."""
     logger.info("💾 PostgreSQL Data Ingestion")
     logger.info("=" * 40)
 
-    # Find and load the latest music transactions file
-    logger.info("📁 Loading music transactions data...")
+    # Find and load the latest hospital transactions file
+    logger.info("📁 Loading hospital transactions data...")
     data_dir = Path(config['paths']['data_dir'])
 
     if not data_dir.exists():
         logger.error(f"Data directory not found: {data_dir}")
         return False
 
-    # Look for the latest fake music transactions file
-    json_files = sorted(data_dir.glob("fake_music_transactions_*.json"), reverse=True)
+    # Look for the latest fake hospital transactions file
+    json_files = sorted(data_dir.glob("fake_hospital_transactions_*.json"), reverse=True)
     if not json_files:
-        logger.error(f"No music transaction files found in: {data_dir}")
+        logger.error(f"No hospital transaction files found in: {data_dir}")
         logger.info("📝 Please run the fake data generator first:")
         logger.info("   uv run scripts/ingestion/collect_fake_data.py")
         return False
@@ -119,13 +112,13 @@ def main():
     # Load and validate JSON data
     try:
         with open(data_path, "r", encoding="utf-8") as f:
-            music_transactions = json.load(f)
+            hospital_transactions = json.load(f)
 
-        if not music_transactions:
+        if not hospital_transactions:
             logger.error("No data found in the file")
             return False
 
-        logger.info(f"📊 Loaded {len(music_transactions)} music transaction records")
+        logger.info(f"📊 Loaded {len(hospital_transactions)} hospital transaction records")
 
     except Exception as e:
         logger.error(f"Error loading data file: {e}")
@@ -133,15 +126,15 @@ def main():
 
     # Insert data into PostgreSQL
     logger.info("💾 Inserting data into PostgreSQL...")
-    if insert_music_transactions(music_transactions):
+    if insert_hospital_transactions(hospital_transactions):
         logger.info(
-            f"✅ Successfully inserted {len(music_transactions)} records into "
+            f"✅ Successfully inserted {len(hospital_transactions)} records into "
             f"{POSTGRES_SCHEMA}.{POSTGRES_TABLE}"
         )
         logger.info("✅ Data ingestion completed successfully!")
         return True
     else:
-        logger.error("❌ Failed to insert music transactions")
+        logger.error("❌ Failed to insert hospital transactions")
         return False
 
 

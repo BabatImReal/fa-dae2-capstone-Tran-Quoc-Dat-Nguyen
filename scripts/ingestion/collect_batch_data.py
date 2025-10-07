@@ -1,64 +1,42 @@
-# Standard library imports
+
 import logging
 from pathlib import Path
-
-# Third-party imports
 import kaggle
 import pandas as pd
 import yaml
 
-# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Load configuration from YAML
 def load_config():
-    """Load configuration from YAML file."""
     with open("config.yaml", 'r') as file:
         return yaml.safe_load(file)
 
 config = load_config()
-
-# Use configuration values
 DATA_DIR = config['paths']['data_dir']
-BATCH_DATASET = config['paths']['cleaned_dataset']
+BATCH_DATASET = config['paths']['batch_dataset']
 
-def sanitize_file_path(file_path, base_dir=DATA_DIR):
-    """Sanitize file paths to prevent path traversal."""
-    # Convert to Path object and resolve
-    base_path = Path(base_dir).resolve()
-    target_path = (base_path / file_path).resolve()
-    
-    # Ensure the target path is within the base directory
-    if not str(target_path).startswith(str(base_path)):
-        raise ValueError(f"Invalid file path: {file_path}")
-    
-    return target_path
+def get_dataset_path():
+    # Returns the absolute path to the heart disease dataset
+    return str(Path(DATA_DIR) / BATCH_DATASET)
 
-# Use configuration for Kaggle dataset name
+# Download the heart disease dataset from Kaggle if not present
 kaggle.api.authenticate()
+dataset_path = get_dataset_path()
+if not Path(dataset_path).exists():
+    kaggle.api.dataset_download_files(
+        "kamilpytlak/personal-key-indicators-of-heart-disease", path=DATA_DIR, unzip=True
+    )
+    logger.info(f"Downloaded heart disease dataset to {DATA_DIR}")
+else:
+    logger.info(f"Dataset already exists at {dataset_path}")
 
-# Download the Spotify tracks dataset to the current directory
-kaggle.api.dataset_download_files(
-    "maharshipandya/-spotify-tracks-dataset", path=DATA_DIR, unzip=True
-)
-
-# Path to downloaded dataset - sanitized
-dataset_path = sanitize_file_path(config['paths']['batch_dataset'])
-cleaned_path = sanitize_file_path(BATCH_DATASET)
-
-# Load dataset
-df = pd.read_csv(dataset_path)
-
-# Drop first column if it's just an index
-if df.columns[0].startswith("Unnamed") or df.columns[0] == "0":
-    df = df.drop(df.columns[0], axis=1)
-
-# Save cleaned dataset
-df.to_csv(cleaned_path, index=False)
-
-logger.info(f"Cleaned dataset saved to {cleaned_path}")
-print(df.head())
+# Load and print the dataset head
+if Path(dataset_path).exists():
+    df = pd.read_csv(dataset_path)
+    print(df.head())
+else:
+    logger.error(f"Dataset file not found at {dataset_path}")

@@ -9,13 +9,13 @@
 - **Source:** Fake data stream (Python + Faker)
 - **Process:** Row-by-row data collection
 - **Destination:** PostgreSQL (via Docker)
-- **Scripts:** `ingestion/collect_realtime.py`, `ingestion/load_to_postgres.py`
+- **Scripts:** `ingestion/collect_fake_data.py`, `ingestion/ingest_to_postgres.py`
 
 #### Batch Pipeline
 - **Source:** Kaggle Spotify Tracks Dataset (CSV)
 - **Process:** Bulk data collection (500+ rows)
 - **Destination:** Snowflake
-- **Scripts:** `ingestion/collect_batch.py`, `ingestion/load_to_snowflake.py`
+- **Scripts:** `ingestion/collect_batch_data.py`, `ingestion/ingest_to_snowflake.py`
 
 > **Note:** Two different data sources are used—one for each pipeline type.
 

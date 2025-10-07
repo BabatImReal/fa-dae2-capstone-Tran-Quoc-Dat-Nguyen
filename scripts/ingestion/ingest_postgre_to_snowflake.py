@@ -11,14 +11,18 @@ import yaml
 from dotenv import load_dotenv
 from snowflake.connector.pandas_tools import write_pandas
 
-# Set up logging
+# ------------------------------------------------------------
+# LOGGING SETUP
+# ------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Load configuration from YAML
+# ------------------------------------------------------------
+# CONFIG LOADER
+# ------------------------------------------------------------
 def load_config():
     """Load configuration from YAML file."""
     with open("config.yaml", 'r') as file:
@@ -26,23 +30,28 @@ def load_config():
 
 config = load_config()
 
-# Use configuration values
 SNOWFLAKE_POSTGRE_TABLE = config['snowflake']['postgre_table']
 POSTGRES_SCHEMA = config['postgresql']['schema']
 POSTGRES_TABLE = config['postgresql']['table']
 
+# ------------------------------------------------------------
+# SQL IDENTIFIER SANITIZER
+# ------------------------------------------------------------
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
     if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$', identifier):
         raise ValueError(f"Invalid SQL identifier: {identifier}")
     return identifier
 
+# ------------------------------------------------------------
+# MAIN PIPELINE
+# ------------------------------------------------------------
 def load_postgres_to_snowflake():
     """Incrementally extract data from PostgreSQL and load into Snowflake."""
     load_dotenv()
 
     # -------------------------------
-    # Connect to Snowflake first to get latest ingested_at
+    # Connect to Snowflake
     # -------------------------------
     sf_conn = snowflake.connector.connect(
         account=os.getenv("SNOWFLAKE_ACCOUNT"),
@@ -57,16 +66,11 @@ def load_postgres_to_snowflake():
     )
 
     cur = sf_conn.cursor()
-    # Use row count comparison instead of timestamp to avoid conversion issues
     try:
-        # Sanitize table name
         table_name = sanitize_identifier(SNOWFLAKE_POSTGRE_TABLE)
-        
-        # Get count of records in Snowflake
         cur.execute(f"SELECT COUNT(*) FROM {table_name};")
         sf_row_count = cur.fetchone()[0]
         logger.info(f"📊 Snowflake table has {sf_row_count} records")
-
     except snowflake.connector.errors.ProgrammingError as e:
         if "does not exist" in str(e).lower():
             logger.warning(f"Table {SNOWFLAKE_POSTGRE_TABLE} does not exist yet")
@@ -90,24 +94,18 @@ def load_postgres_to_snowflake():
         password=os.getenv("POSTGRES_PASSWORD"),
     )
 
-    # Build query to get all data from PostgreSQL (we'll filter after loading)
     query = f"""
         SELECT 
-            event_id,
-            user_id,
-            session_id,
-            song_id,
-            song_title,
-            artist,
-            album,
-            genre,
-            duration_seconds,
-            position_seconds,
-            event_action,
-            device_type,
-            platform,
-            "timestamp" AS event_timestamp,   -- reserved word
-            user_premium,
+            transaction_id,
+            patient_id,
+            admission_id,
+            department,
+            doctor,
+            service,
+            cost,
+            payment_method,
+            transaction_time,
+            status,
             ingested_at
         FROM {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
         ORDER BY ingested_at
@@ -119,8 +117,7 @@ def load_postgres_to_snowflake():
     logger.info(f"📊 Total records in PostgreSQL: {len(df)}")
     if not df.empty:
         logger.info(
-            f"📅 PostgreSQL data range: {df['ingested_at'].min()} to "
-            f"{df['ingested_at'].max()}"
+            f"📅 PostgreSQL data range: {df['ingested_at'].min()} → {df['ingested_at'].max()}"
         )
 
     if df.empty:
@@ -131,41 +128,42 @@ def load_postgres_to_snowflake():
     # -------------------------------
     # Transform: type conversions
     # -------------------------------
-    uuid_cols = ["event_id", "user_id", "session_id", "song_id"]
+    uuid_cols = ["transaction_id", "patient_id", "admission_id"]
     for col in uuid_cols:
         if col in df.columns:
             df[col] = df[col].astype(str)
 
-    # Convert timestamp columns to datetime (keep as datetime, do NOT format as string)
-    ts_cols = ["event_timestamp", "ingested_at"]
+    # Convert timestamp columns to strings for Snowflake compatibility
+    ts_cols = ["transaction_time", "ingested_at"]
     for col in ts_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
+            # ✅ SAFE FIX: convert to ISO string format
+            df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
 
-    # Simple incremental logic: only load records beyond what Snowflake already has
+    # -------------------------------
+    # Incremental load logic
+    # -------------------------------
     pg_total_records = len(df)
     if sf_row_count > 0 and sf_row_count < pg_total_records:
-        # Skip the first sf_row_count records (already in Snowflake)
         df = df.iloc[sf_row_count:].copy().reset_index(drop=True)
         logger.info(f"🔍 Incremental load: skipping first {sf_row_count} records")
         logger.info(
-            f"📊 Loading records {sf_row_count + 1} to {pg_total_records} "
+            f"📊 Loading records {sf_row_count + 1} → {pg_total_records} "
             f"({len(df)} new records)"
         )
     elif sf_row_count >= pg_total_records:
         logger.info(
-            f"👌 Snowflake already has {sf_row_count} records, PostgreSQL has "
-            f"{pg_total_records}. Nothing to load."
+            f"👌 Snowflake already has {sf_row_count} records, PostgreSQL has {pg_total_records}. Nothing to load."
         )
         sf_conn.close()
         return
     else:
         logger.info(
-            f"📋 Full load: Snowflake has {sf_row_count} records, loading all "
-            f"{pg_total_records} from PostgreSQL"
+            f"📋 Full load: Snowflake has {sf_row_count} records, loading all {pg_total_records} from PostgreSQL"
         )
 
-    # Rename columns to uppercase for Snowflake compatibility
+    # Rename columns to uppercase for Snowflake
     df.columns = [c.upper() for c in df.columns]
 
     if df.empty:
@@ -173,7 +171,17 @@ def load_postgres_to_snowflake():
         sf_conn.close()
         return
 
-    logger.info(f"✅ Processing {len(df)} new records for Snowflake load")
+    logger.info(f"✅ Preparing {len(df)} new records for Snowflake load")
+
+    # -------------------------------
+    # Final safety check and fix
+    # -------------------------------
+    # Ensure timestamp columns are string type before write_pandas()
+    for col in ["TRANSACTION_TIME", "INGESTED_AT"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+
+    logger.info(f"🧩 Column types before load:\n{df.dtypes}")
 
     # -------------------------------
     # Load into Snowflake
@@ -182,19 +190,20 @@ def load_postgres_to_snowflake():
         success, nchunks, nrows, _ = write_pandas(
             sf_conn,
             df,
-            "RAW_DATA_POSTGRE",
-            schema="SC_RAW_DATA",
+            SNOWFLAKE_POSTGRE_TABLE.split('.')[-1],
+            schema=SNOWFLAKE_POSTGRE_TABLE.split('.')[0],
         )
         logger.info(
-            f"✅ Loaded {nrows} new records into Snowflake table "
-            f"{SNOWFLAKE_POSTGRE_TABLE}"
+            f"✅ Successfully loaded {nrows} new records into {SNOWFLAKE_POSTGRE_TABLE}"
         )
-
     except Exception as e:
-        logger.error(f"Loading failed: {e}")
+        logger.error(f"❌ Loading failed: {e}")
     finally:
         sf_conn.close()
 
 
+# ------------------------------------------------------------
+# ENTRY POINT
+# ------------------------------------------------------------
 if __name__ == "__main__":
     load_postgres_to_snowflake()
