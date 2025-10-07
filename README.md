@@ -1,20 +1,24 @@
+
 ### Project Overview
-- **Working title**: Music Pipeline
-- **One-sentence summary**: An end-to-end music data pipeline that ingests both batch (Kaggle dataset) and streaming (Faker-generated) data, enabling analysis and real-time recommendations.
-- **Business/value objective**: Provide users with meaningful music recommendations and insights by leveraging batch data for analytics and fake streaming data for real-time result generation.
-- **Success metrics** (quantitative): Recommendation accuracy, user engagement rate, pipeline reliability, coverage of genres/artists.
+- **Working title**: Health Data Pipeline
+- **One-sentence summary**: An end-to-end health data pipeline that ingests both batch (Kaggle heart disease dataset) and streaming (Faker-generated hospital transaction) data, enabling analytics and real-time healthcare insights.
+- **Business/value objective**: Provide healthcare analytics and operational insights by leveraging batch health survey data and real-time hospital transaction data.
+- **Success metrics** (quantitative): Data pipeline reliability, data quality, analytics accuracy, and operational coverage.
+
 
 ### Problem & Scope
-- **Problem statement and constraints**: Users require personalized music recommendations and metadata, but real streaming data may not be available. The pipeline must support both batch analytics and real-time queries using fake data for development and demonstration.
-- **Personas/stakeholders and primary use cases**: Music listeners, playlist curators, researchers. Use cases: recommend a song by genre (using fake streaming data), analyze trends and metadata (using batch data), retrieve artist/song information.
-- **In/out of scope**: In scope: recommendations, metadata lookup, batch analytics, fake data streaming integration. Out of scope: audio playback, user authentication, social features.
+- **Problem statement and constraints**: Healthcare organizations require analytics on heart disease risk and hospital operations, but real streaming transaction data may not be available. The pipeline must support both batch analytics (from public health datasets) and real-time queries using fake hospital transaction data for development and demonstration.
+- **Personas/stakeholders and primary use cases**: Healthcare analysts, hospital administrators, researchers. Use cases: analyze heart disease risk factors (batch), monitor hospital transactions and operations (streaming), validate data pipeline reliability.
+- **In/out of scope**: In scope: health analytics, operational monitoring, batch and streaming data integration. Out of scope: patient care, medical diagnosis, real patient data.
+
 
 ### Data Sources
-- **Batch source(s) (planned/production)**: [Kaggle Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset), CSV, ~230k tracks, static snapshot (last updated 2023).  
+- **Batch source(s) (planned/production)**: [Kaggle Heart Disease UCI Dataset](https://www.kaggle.com/datasets/kamilpytlak/personal-key-indicators-of-heart-disease), CSV, ~320k rows, static snapshot.  
   See [batch-source-validation.md](docs/data-source/batch-source-validation.md) for validation details.
-- **Streaming source(s)**: Fake data stream generated via Python scripts and Faker.  
+- **Streaming source(s)**: Fake hospital transaction data generated via Python scripts and Faker.  
   See [stream-source-validation.md](docs/data-source/stream-source-validation.md) for validation details.
-- **Incremental strategy**: Use track/artist IDs and timestamps for deduplication and incremental updates
+- **Incremental strategy**: Use transaction IDs and timestamps for deduplication and incremental updates
+
 
 ### Architecture Overview
 - **High-level diagram**: See [architecture.md](docs/architecture/architecture.md) for a detailed system diagram.
@@ -29,6 +33,7 @@
 - Docker and Docker Compose
 - Git
 - Snowflake account (optional for full pipeline)
+
 
 ### 1. Environment Setup
 
@@ -62,6 +67,7 @@ uv sync --group dev
 uv sync --all-groups
 ```
 
+
 ### 2. Environment Variables Configuration
 
 #### Copy Environment Template
@@ -77,6 +83,7 @@ Edit the `.env` file with your specific configuration
 # Load environment variables
 export $(cat .env | xargs)
 ```
+
 
 ### 3. Docker Setup
 
@@ -107,6 +114,7 @@ docker-compose down
 docker-compose down -v
 ```
 
+
 ### 4. PostgreSQL Setup
 
 #### Database Initialization
@@ -133,6 +141,7 @@ docker exec -it m01w02-postgres psql -U staging_user -d staging_db
 \q
 ```
 
+
 ### 5. Snowflake Setup (Optional)
 
 #### Database Structure
@@ -140,18 +149,19 @@ Create the following structure in your Snowflake account:
 
 ```sql
 -- Create database
-CREATE DATABASE IF NOT EXISTS MUSIC_PIPELINE;
+CREATE DATABASE IF NOT EXISTS HEALTH_PIPELINE;
 
 -- Create schemas
-CREATE SCHEMA IF NOT EXISTS MUSIC_PIPELINE.RAW_DATA;
-CREATE SCHEMA IF NOT EXISTS MUSIC_PIPELINE.STAGING;
-CREATE SCHEMA IF NOT EXISTS MUSIC_PIPELINE.ANALYTICS;
+CREATE SCHEMA IF NOT EXISTS HEALTH_PIPELINE.RAW_DATA;
+CREATE SCHEMA IF NOT EXISTS HEALTH_PIPELINE.STAGING;
+CREATE SCHEMA IF NOT EXISTS HEALTH_PIPELINE.ANALYTICS;
 
 -- Grant permissions (adjust role as needed)
-GRANT USAGE ON DATABASE MUSIC_PIPELINE TO ROLE your_role;
-GRANT USAGE ON ALL SCHEMAS IN DATABASE MUSIC_PIPELINE TO ROLE your_role;
-GRANT CREATE TABLE ON ALL SCHEMAS IN DATABASE MUSIC_PIPELINE TO ROLE your_role;
+GRANT USAGE ON DATABASE HEALTH_PIPELINE TO ROLE your_role;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE HEALTH_PIPELINE TO ROLE your_role;
+GRANT CREATE TABLE ON ALL SCHEMAS IN DATABASE HEALTH_PIPELINE TO ROLE your_role;
 ```
+
 
 #### Authentication Setup
 
@@ -160,20 +170,21 @@ GRANT CREATE TABLE ON ALL SCHEMAS IN DATABASE MUSIC_PIPELINE TO ROLE your_role;
 
 **Option 2: Private Key (Recommended)**
 1. Generate a private key pair:
-   ```bash
-   # Generate private key
-   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+  ```bash
+  # Generate private key
+  openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
    
-   # Generate public key
-   openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
-   ```
+  # Generate public key
+  openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+  ```
 
 2. Add the public key to your Snowflake user:
-   ```sql
-   ALTER USER your_username SET RSA_PUBLIC_KEY='your_public_key_content';
-   ```
+  ```sql
+  ALTER USER your_username SET RSA_PUBLIC_KEY='your_public_key_content';
+  ```
 
 3. Update your `.env` file with the private key path and passphrase
+
 
 ### 6. Testing the Setup
 
@@ -201,14 +212,15 @@ uv run pytest tests/
 uv run pytest tests/ -v
 ```
 
+
 ### 7. Running the Pipeline
 
 #### Collect and Ingest Data
 ```bash
-# Collect batch data
+# Collect batch data (heart disease)
 uv run python scripts/ingestion/collect_batch_data.py
 
-# Generate fake streaming data
+# Generate fake hospital transaction streaming data
 uv run python scripts/ingestion/collect_fake_data.py
 
 # Ingest to PostgreSQL
@@ -225,6 +237,7 @@ uv run python scripts/ingestion/ingest_postgre_to_snowflake.py
 ```bash
 uv run python main.py
 ```
+
 
 ### 8. Troubleshooting
 
@@ -257,6 +270,7 @@ uv run python main.py
 - Review Docker logs: `docker-compose logs`
 - Verify environment variables: `cat .env`
 - Test individual components using the test scripts
+
 
 ### Implementation Milestones
 - **Module 1 (Week 4)**: Data sources setup, basic pipeline structure

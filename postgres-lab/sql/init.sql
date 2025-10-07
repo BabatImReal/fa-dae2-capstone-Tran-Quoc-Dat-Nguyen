@@ -4,23 +4,19 @@
 -- Create staging schema
 CREATE SCHEMA IF NOT EXISTS staging;
 
--- Create music_transactions table with music event structure
-CREATE TABLE IF NOT EXISTS staging.music_transactions (
-    event_id UUID PRIMARY KEY,
-    user_id UUID,
-    session_id UUID,
-    song_id UUID,
-    song_title VARCHAR(255),
-    artist VARCHAR(255),
-    album VARCHAR(255),
-    genre VARCHAR(50),
-    duration_seconds INTEGER,
-    position_seconds INTEGER,
-    event_action VARCHAR(50),
-    device_type VARCHAR(50),
-    platform VARCHAR(50),
-    timestamp TIMESTAMP,
-    user_premium BOOLEAN,
+
+-- Create hospital_transactions table for hospital transaction fake data
+CREATE TABLE IF NOT EXISTS staging.hospital_transactions (
+    transaction_id UUID PRIMARY KEY,
+    patient_id UUID,
+    admission_id UUID,
+    department VARCHAR(100),
+    doctor VARCHAR(100),
+    service VARCHAR(255),
+    cost NUMERIC(10,2),
+    payment_method VARCHAR(50),
+    transaction_time TIMESTAMP,
+    status VARCHAR(20),
     ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

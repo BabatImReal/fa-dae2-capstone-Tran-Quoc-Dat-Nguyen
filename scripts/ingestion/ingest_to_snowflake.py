@@ -27,7 +27,7 @@ config = load_config()
 # Use configuration values
 STAGE_FQN = config['snowflake']['stage_fqn']
 TABLE_FQN = config['snowflake']['table_fqn']
-TRACK_COLS = config['columns']['track']
+HEART_COLS = config['columns']['heart_disease']
 
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
@@ -113,11 +113,9 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
     table_fqn = sanitize_identifier(TABLE_FQN)
     stage_fqn = sanitize_identifier(STAGE_FQN)
     
-    columns_sql = ", ".join(TRACK_COLS)
+    columns_sql = ", ".join(HEART_COLS)
     copy_sql = f"""
-    COPY INTO {table_fqn} (
-        {columns_sql}
-    )
+    COPY INTO {table_fqn}
     FROM @{stage_fqn}
     FILE_FORMAT = (
         TYPE=CSV
@@ -125,6 +123,7 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
         FIELD_OPTIONALLY_ENCLOSED_BY='"'
         SKIP_HEADER=1
         NULL_IF=('','NULL')
+        ERROR_ON_COLUMN_COUNT_MISMATCH=FALSE
     )
     PATTERN = %s
     ON_ERROR = 'ABORT_STATEMENT'
@@ -146,9 +145,10 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
 
 
 # Main function to upload and load CSV data into Snowflake
+
 def main():
     # Use configuration for the CSV path
-    csv_path = f"{config['paths']['data_dir']}/{config['paths']['cleaned_dataset']}"
+    csv_path = f"{config['paths']['data_dir']}/{config['paths']['batch_dataset']}"
     if upload_csv_to_stage(csv_path):
         load_csv_to_table()
 
