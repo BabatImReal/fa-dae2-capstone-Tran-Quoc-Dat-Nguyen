@@ -1,0 +1,48 @@
+# models/staging/_sources.yml
+version: 2
+
+sources:
+  - name: sc_raw_data         # schema name in Snowflake (lowercase recommended)
+    description: Raw data tables loaded from batch ingestion
+    database: DB_T22          # your Snowflake database name
+    schema: SC_RAW_DATA       # your schema name (case-sensitive in Snowflake)
+    tables:
+      - name: raw_data        # your table name (case-insensitive unless quoted)
+        description: Heart disease batch data
+        columns:
+          - name: HeartDisease
+            description: Target variable, indicates heart disease
+          - name: BMI
+            description: Body Mass Index
+          - name: Smoking
+            description: Smoking status
+          - name: AlcoholDrinking
+            description: Alcohol drinking status
+          - name: Stroke
+            description: Stroke history
+          - name: PhysicalHealth
+            description: Physical health score
+          - name: MentalHealth
+            description: Mental health score
+          - name: DiffWalking
+            description: Difficulty walking
+          - name: Sex
+            description: Sex
+          - name: AgeCategory
+            description: Age category
+          - name: Race
+            description: Race
+          - name: Diabetic
+            description: Diabetic status
+          - name: PhysicalActivity
+            description: Physical activity status
+          - name: GenHealth
+            description: General health
+          - name: SleepTime
+            description: Sleep time
+          - name: Asthma
+            description: Asthma status
+          - name: KidneyDisease
+            description: Kidney disease status
+          - name: SkinCancer
+            description: Skin cancer status
