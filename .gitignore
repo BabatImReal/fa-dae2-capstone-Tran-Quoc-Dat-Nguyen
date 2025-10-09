@@ -21,6 +21,7 @@ data/models/
 
 # Environment variables
 .env
+.env.*
 .env.local
 .env.production
 
@@ -42,3 +43,16 @@ Thumbs.db
 .dockerignore*.p8
 *.pem
 *.pub
+.secrets/
+*.p8
+*.pem
+*.key
+
+
+# dbt profiles
+.dbt/
+
+# dbt artifacts
+target/
+logs/
+dbt_packages/

@@ -548,6 +548,7 @@ name = "fa-dae2-capstone-tran-quoc-dat-nguyen"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "dbt-core" },
     { name = "dbt-snowflake" },
     { name = "faker" },
     { name = "flask" },
@@ -572,6 +573,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dbt-core", specifier = ">=1.10.13" },
     { name = "dbt-snowflake", specifier = ">=1.10.2" },
     { name = "faker", specifier = ">=37.6.0" },
     { name = "flask", specifier = ">=3.1.2" },
