@@ -107,16 +107,45 @@ def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
     return True
 
 
+# Mapping from config column names to Snowflake table column names
+CONFIG_TO_TABLE_COLS = {
+    "HeartDisease": "HEARTDISEASE",
+    "BMI": "BMI",
+    "Smoking": "SMOKING",
+    "AlcoholDrinking": "ALCOHOL_DRINKING",
+    "Stroke": "STROKE",
+    "PhysicalHealth": "PHYSICAL_HEALTH",
+    "MentalHealth": "MENTAL_HEALTH",
+    "DiffWalking": "DIFF_WALKING",
+    "Sex": "SEX",
+    "AgeCategory": "AGE_CATEGORY",
+    "Race": "RACE",
+    "Diabetic": "DIABETIC",
+    "PhysicalActivity": "PHYSICAL_ACTIVITY",
+    "GenHealth": "GEN_HEALTH",
+    "SleepTime": "SLEEP_TIME",
+    "Asthma": "ASTHMA",
+    "KidneyDisease": "KIDNEY_DISEASE",
+    "SkinCancer": "SKIN_CANCER",
+}
+
 # Load CSV data from the stage into the Snowflake table
 def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
     # Sanitize inputs
     table_fqn = sanitize_identifier(TABLE_FQN)
     stage_fqn = sanitize_identifier(STAGE_FQN)
-    
-    columns_sql = ", ".join(HEART_COLS)
+
+    # Map config columns to table columns
+    table_cols = [CONFIG_TO_TABLE_COLS[c] for c in HEART_COLS] + ["LOADED_AT", "SOURCE_SYSTEM"]
+    columns_sql = ", ".join(table_cols)
+    select_cols = ", ".join([f"${i+1}" for i in range(len(HEART_COLS))])
+    select_sql = f"{select_cols}, CURRENT_TIMESTAMP(), 'ingest_script'"
     copy_sql = f"""
-    COPY INTO {table_fqn}
-    FROM @{stage_fqn}
+    COPY INTO {table_fqn} ({columns_sql})
+    FROM (
+        SELECT {select_sql}
+        FROM @{stage_fqn}
+    )
     FILE_FORMAT = (
         TYPE=CSV
         FIELD_DELIMITER=','
@@ -125,11 +154,11 @@ def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
         NULL_IF=('','NULL')
         ERROR_ON_COLUMN_COUNT_MISMATCH=FALSE
     )
-    PATTERN = %s
+    PATTERN = '{pattern}'
     ON_ERROR = 'ABORT_STATEMENT'
     """
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute(copy_sql, (pattern,))
+        cur.execute(copy_sql)
         rows = cur.fetchall()
         if rows and len(rows[0]) == 1:
             logger.warning(f"{rows[0][0]}")

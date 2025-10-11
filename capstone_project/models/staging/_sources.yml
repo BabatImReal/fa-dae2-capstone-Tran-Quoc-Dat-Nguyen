@@ -1,0 +1,95 @@
+version: 2
+
+sources:
+  - name: sc_raw_data
+    description: Raw data tables loaded from batch ingestion
+    database: DB_T22
+    schema: SC_RAW_DATA
+    tables:
+      - name: raw_data
+        description: Heart disease batch data
+        columns:
+          - name: HeartDisease
+            description: Target variable, indicates heart disease
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: BMI
+            description: Body Mass Index
+            tests:
+              - not_null
+          - name: Smoking
+            description: Smoking status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Alcohol_Drinking
+            description: Alcohol drinking status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Stroke
+            description: Stroke history
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Physical_Health
+            description: Physical health score
+            tests:
+              - not_null
+          - name: Mental_Health
+            description: Mental health score
+            tests:
+              - not_null
+          - name: Diff_Walking
+            description: Difficulty walking
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Sex
+            description: Sex
+            tests:
+              - accepted_values:
+                  values: ['Male', 'Female']
+          - name: Age_Category
+            description: Age category
+            tests:
+              - not_null
+          - name: Race
+            description: Race
+            tests:
+              - not_null
+          - name: Diabetic
+            description: Diabetic status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No', 'No, borderline diabetes', 'Yes (during pregnancy)']
+          - name: Physical_Activity
+            description: Physical activity status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Gen_Health
+            description: General health
+            tests:
+              - not_null
+          - name: Sleep_Time
+            description: Sleep time
+            tests:
+              - not_null
+          - name: Asthma
+            description: Asthma status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Kidney_Disease
+            description: Kidney disease status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
+          - name: Skin_Cancer
+            description: Skin cancer status
+            tests:
+              - accepted_values:
+                  values: ['Yes', 'No']
