@@ -1,13 +1,11 @@
-
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'capstone_transformation'
+name: 'capstone_project'
 version: '1.0.0'
-config-version: 2
 
 # This setting configures which "profile" dbt uses for this project.
-profile: 'capstone_transformation'
+profile: capstone_project
 
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
@@ -20,38 +18,21 @@ macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
 target-path: "target"
-clean-targets:         # directories to be removed by `dbt clean`
+clean-targets:
   - "target"
   - "dbt_packages"
 
-
-# Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
 models:
   capstone_project:
     staging:
-      materialized: view
-      schema: staging
-    intermediate:
-      materialized: ephemeral
-      schema: intermediate
+      +materialized: view
     marts:
-      materialized: table
-      schema: marts
-      cluster_by: ["loaded_at"]
-
-vars:
-  raw_schema: 'raw'
-  staging_schema: 'staging'
-  intermediate_schema: 'intermediate'
-  marts_schema: 'marts'
+      +materialized: table
+    intermediate:
+      +materialized: ephemeral
 
 seeds:
-  capstone_transformation:
+  capstone_project:
     +column_types:
       id: integer
       created_at: timestamp

@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: stg__disease
+    description: "Cleaned and standardized disease data"
+    columns:
+      - name: heart_disease
+        tests:
+          - not_null
+
+      - name: bmi
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                strictly: true
+
+      - name: processed_at
+        tests:
+          - not_null

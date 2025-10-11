@@ -10,7 +10,7 @@ postgresql:
   table: "hospital_transactions"
 
 paths:
-  data_dir: "data/external"
+  data_dir: "data/external/2020"
   cleaned_dataset: "dataset_clean.csv"
   batch_dataset: "heart_2020_cleaned.csv"
 
