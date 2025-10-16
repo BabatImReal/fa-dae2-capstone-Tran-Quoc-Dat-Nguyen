@@ -18,16 +18,18 @@ logger = logging.getLogger(__name__)
 
 # Load configuration from YAML
 def load_config():
-    """Load configuration from YAML file."""
-    with open("config.yaml", 'r') as file:
+    """Load configuration from YAML file (project root)."""
+    here = Path(__file__).resolve().parents[2]
+    cfg_path = here / "config.yaml"
+    with open(cfg_path, 'r') as file:
         return yaml.safe_load(file)
 
 config = load_config()
 
 # Use configuration values
 STAGE_FQN = config['snowflake']['stage_fqn']
-TABLE_FQN = config['snowflake']['table_fqn']
-HEART_COLS = config['columns']['heart_disease']
+DEFAULT_TABLE_FQN = config['snowflake'].get('table_fqn')
+
 
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
@@ -76,11 +78,15 @@ def get_conn():
 
 
 # Upload a CSV file to the Snowflake stage
-def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
+def upload_csv_to_stage(csv_file_path: str, stage_fqn: str, overwrite=True) -> bool:
+    """Upload a local CSV file to the given Snowflake stage.
+
+    Returns True on success.
+    """
     if not csv_file_path:
         logger.error("CSV_PATH not set.")
         return False
-    
+
     # Sanitize the file path
     try:
         abs_path = sanitize_file_path(csv_file_path)
@@ -90,96 +96,134 @@ def upload_csv_to_stage(csv_file_path: str, overwrite=True) -> bool:
     except ValueError as e:
         logger.error(f"Invalid file path: {e}")
         return False
-    
-    stage_fqn = sanitize_identifier(STAGE_FQN)
-    
-    # Construct the PUT command safely
-    put_sql = f"PUT file://{abs_path} @{stage_fqn}" + (
-        " OVERWRITE=TRUE" if overwrite else ""
-    )
+
+    stage = sanitize_identifier(stage_fqn)
+
+    put_sql = f"PUT file://{abs_path} @{stage}" + (" OVERWRITE=TRUE" if overwrite else "")
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(put_sql)
-        for r in cur.fetchall():
-            logger.info(f"PUT {r[0]} -> {r[1]} [{r[6]}]")
-        cur.execute(f"LIST @{stage_fqn}")
+        # fetch results if any
+        try:
+            rows = cur.fetchall()
+            for r in rows:
+                logger.info(f"PUT {r[0]} -> {r[1]} [{r[6]}]")
+        except Exception:
+            # Some connectors return no rows
+            pass
+        cur.execute(f"LIST @{stage}")
         listed = cur.fetchall()
-        logger.info(f"📄 Files in stage: {len(listed)}")
+        logger.info(f"📄 Files in stage {stage}: {len(listed)}")
     return True
 
 
 # Mapping from config column names to Snowflake table column names
-CONFIG_TO_TABLE_COLS = {
-    "HeartDisease": "HEARTDISEASE",
-    "BMI": "BMI",
-    "Smoking": "SMOKING",
-    "AlcoholDrinking": "ALCOHOL_DRINKING",
-    "Stroke": "STROKE",
-    "PhysicalHealth": "PHYSICAL_HEALTH",
-    "MentalHealth": "MENTAL_HEALTH",
-    "DiffWalking": "DIFF_WALKING",
-    "Sex": "SEX",
-    "AgeCategory": "AGE_CATEGORY",
-    "Race": "RACE",
-    "Diabetic": "DIABETIC",
-    "PhysicalActivity": "PHYSICAL_ACTIVITY",
-    "GenHealth": "GEN_HEALTH",
-    "SleepTime": "SLEEP_TIME",
-    "Asthma": "ASTHMA",
-    "KidneyDisease": "KIDNEY_DISEASE",
-    "SkinCancer": "SKIN_CANCER",
-}
+def _sanitize_col(col: str) -> str:
+    """Turn column name into a safe Snowflake identifier (uppercased, underscores)."""
+    return re.sub(r"[^0-9A-Za-z_]", "_", col).upper()
 
-# Load CSV data from the stage into the Snowflake table
-def load_csv_to_table(pattern: str = r".*\.csv(\.gz)?") -> bool:
-    # Sanitize inputs
-    table_fqn = sanitize_identifier(TABLE_FQN)
-    stage_fqn = sanitize_identifier(STAGE_FQN)
 
-    # Map config columns to table columns
-    table_cols = [CONFIG_TO_TABLE_COLS[c] for c in HEART_COLS] + ["LOADED_AT", "SOURCE_SYSTEM"]
-    columns_sql = ", ".join(table_cols)
-    select_cols = ", ".join([f"${i+1}" for i in range(len(HEART_COLS))])
-    select_sql = f"{select_cols}, CURRENT_TIMESTAMP(), 'ingest_script'"
+def create_table_if_not_exists(table_fqn: str, cols: list):
+    """Create a table with VARCHAR columns (simple) plus LOADED_AT and SOURCE_SYSTEM."""
+    table = sanitize_identifier(table_fqn)
+    col_defs = ", ".join([f"{_sanitize_col(c)} VARCHAR" for c in cols])
+    col_defs += ", LOADED_AT TIMESTAMP_NTZ, SOURCE_SYSTEM VARCHAR"
+    create_sql = f"CREATE TABLE IF NOT EXISTS {table} ({col_defs})"
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(create_sql)
+        logger.info(f"✅ Ensured table exists: {table}")
+
+
+def load_csv_file_from_stage_to_table(table_fqn: str, stage_fqn: str, file_pattern: str, cols: list):
+    """COPY files matching pattern from stage into table using explicit column list.
+
+    cols: list of original CSV column names (will be sanitized to SQL identifiers)
+    """
+    table = sanitize_identifier(table_fqn)
+    stage = sanitize_identifier(stage_fqn)
+
+    # Build target column list (sanitized) and append LOADED_AT/SOURCE_SYSTEM
+    target_cols = ", ".join([_sanitize_col(c) for c in cols] + ["LOADED_AT", "SOURCE_SYSTEM"])
+
     copy_sql = f"""
-    COPY INTO {table_fqn} ({columns_sql})
-    FROM (
-        SELECT {select_sql}
-        FROM @{stage_fqn}
-    )
+    COPY INTO {table} ({target_cols})
+    FROM @{stage}
     FILE_FORMAT = (
-        TYPE=CSV
-        FIELD_DELIMITER=','
-        FIELD_OPTIONALLY_ENCLOSED_BY='"'
-        SKIP_HEADER=1
-        NULL_IF=('','NULL')
-        ERROR_ON_COLUMN_COUNT_MISMATCH=FALSE
+      TYPE = CSV
+      FIELD_DELIMITER = ','
+      FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+      SKIP_HEADER = 1
+      NULL_IF = ('','NULL')
+      ERROR_ON_COLUMN_COUNT_MISMATCH = FALSE
     )
-    PATTERN = '{pattern}'
+    PATTERN = '{file_pattern}'
     ON_ERROR = 'ABORT_STATEMENT'
     """
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(copy_sql)
-        rows = cur.fetchall()
-        if rows and len(rows[0]) == 1:
-            logger.warning(f"{rows[0][0]}")
-        else:
-            loaded = sum(
-                1 for r in rows if len(r) > 1 and str(r[1]).upper() == "LOADED"
-            )
-            logger.info(f"✅ COPY files loaded: {loaded}")
-        cur.execute(f"SELECT COUNT(*) FROM {table_fqn}")
+        try:
+            rows = cur.fetchall()
+            logger.info(f"COPY result rows: {len(rows)}")
+        except Exception:
+            # some drivers don't return rows
+            pass
+        cur.execute(f"SELECT COUNT(*) FROM {table}")
         total = cur.fetchone()[0]
-        logger.info(f"📊 Row count: {total}")
+        logger.info(f"📊 Row count for {table}: {total}")
     return True
 
 
 # Main function to upload and load CSV data into Snowflake
 
 def main():
-    # Use configuration for the CSV path
-    csv_path = f"{config['paths']['data_dir']}/{config['paths']['batch_dataset']}"
-    if upload_csv_to_stage(csv_path):
-        load_csv_to_table()
+    # Determine local dataset directory (prefer dlt_input_dir if present)
+    project_root = Path(__file__).resolve().parents[2]
+    dlt_dir = config['paths'].get('dlt_input_dir') or config['paths'].get('data_dir')
+    local_data_dir = project_root / dlt_dir
+
+    if not local_data_dir.exists():
+        logger.error(f"Local data directory does not exist: {local_data_dir}")
+        return
+
+    # Derive a table namespace prefix from the stage/table config
+    stage_prefix = STAGE_FQN.split('.')[0] if '.' in STAGE_FQN else STAGE_FQN
+
+    # For each dataset configured in config['columns'], find the matching CSV and load it
+    for dataset_name, cols in config.get('columns', {}).items():
+        # Build expected filename patterns (files in the dataset folder)
+        # e.g., key 'olist_orders' -> 'olist_orders_dataset.csv' or starting with key
+        candidates = [p for p in os.listdir(local_data_dir) if p.lower().startswith(dataset_name.lower()) and p.lower().endswith('.csv')]
+        if not candidates:
+            logger.warning(f"No file found for dataset '{dataset_name}' in {local_data_dir}")
+            continue
+        # Pick the first matching file
+        filename = candidates[0]
+        local_path = str(local_data_dir / filename)
+
+        # Create target table fqn under the stage prefix (e.g., SC_RAW_DATA.OLIST_ORDERS)
+        target_table = f"{stage_prefix}.{dataset_name.upper()}"
+
+        try:
+            create_table_if_not_exists(target_table, cols)
+        except Exception as e:
+            logger.error(f"Failed to create table {target_table}: {e}")
+            continue
+
+        # Upload file to stage
+        try:
+            upload_csv_to_stage(local_path, STAGE_FQN, overwrite=True)
+        except Exception as e:
+            logger.error(f"Failed to upload {local_path} to stage {STAGE_FQN}: {e}")
+            continue
+
+        # Build a regex pattern that matches the specific uploaded file name
+        escaped = re.escape(filename)
+        pattern = rf".*{escaped}(\.gz)?"
+
+        try:
+            load_csv_file_from_stage_to_table(target_table, STAGE_FQN, pattern, cols)
+        except Exception as e:
+            logger.error(f"Failed to load {filename} into {target_table}: {e}")
+            continue
 
 
 if __name__ == "__main__":
