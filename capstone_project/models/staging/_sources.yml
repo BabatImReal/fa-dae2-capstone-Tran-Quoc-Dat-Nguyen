@@ -6,90 +6,242 @@ sources:
     database: DB_T22
     schema: SC_RAW_DATA
     tables:
-      - name: raw_data
-        description: Heart disease batch data
+      - name: olist_orders
+        description: Ecommerce orders
         columns:
-          - name: HeartDisease
-            description: Target variable, indicates heart disease
+          - name: order_id
+            description: Primary key of order
             tests:
               - not_null
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: BMI
-            description: Body Mass Index
+              - unique
+          - name: customer_id
+            description: Foreign key to customers
             tests:
               - not_null
-          - name: Smoking
-            description: Smoking status
-            tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Alcohol_Drinking
-            description: Alcohol drinking status
-            tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Stroke
-            description: Stroke history
-            tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Physical_Health
-            description: Physical health score
+              - relationships:
+                  to: source('sc_raw_data', 'olist_customers')
+                  field: customer_id
+          - name: order_status
+            description: Status of the order
+          - name: order_purchase_timestamp
+            description: Purchase timestamp
             tests:
               - not_null
-          - name: Mental_Health
-            description: Mental health score
+          - name: order_approved_at
+            description: Approval timestamp (nullable)
+          - name: order_delivered_carrier_date
+            description: Carrier delivery date (nullable)
+          - name: order_delivered_customer_date
+            description: Customer delivery date (nullable)
+          - name: order_estimated_delivery_date
+            description: Estimated delivery date
+
+      - name: olist_order_items
+        description: Items within orders
+        columns:
+          - name: order_id
+            description: Foreign key to orders
             tests:
               - not_null
-          - name: Diff_Walking
-            description: Difficulty walking
-            tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Sex
-            description: Sex
-            tests:
-              - accepted_values:
-                  values: ['Male', 'Female']
-          - name: Age_Category
-            description: Age category
+              - relationships:
+                  to: source('sc_raw_data', 'olist_orders')
+                  field: order_id
+          - name: order_item_id
+            description: Ordinal of item in order
             tests:
               - not_null
-          - name: Race
-            description: Race
+          - name: product_id
+            description: Foreign key to products
+            tests:
+              - relationships:
+                  to: source('sc_raw_data', 'olist_products')
+                  field: product_id
+          - name: seller_id
+            description: Foreign key to sellers
+            tests:
+              - relationships:
+                  to: source('sc_raw_data', 'olist_sellers')
+                  field: seller_id
+          - name: shipping_limit_date
+            description: Shipping limit date
             tests:
               - not_null
-          - name: Diabetic
-            description: Diabetic status
-            tests:
-              - accepted_values:
-                  values: ['Yes', 'No', 'No, borderline diabetes', 'Yes (during pregnancy)']
-          - name: Physical_Activity
-            description: Physical activity status
-            tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Gen_Health
-            description: General health
+          - name: price
+            description: Price of the item
             tests:
               - not_null
-          - name: Sleep_Time
-            description: Sleep time
+          - name: freight_value
+            description: Freight value
             tests:
               - not_null
-          - name: Asthma
-            description: Asthma status
+
+      - name: olist_order_payments
+        description: Payments for orders
+        columns:
+          - name: order_id
+            description: Foreign key to orders
             tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Kidney_Disease
-            description: Kidney disease status
+              - not_null
+              - relationships:
+                  to: source('sc_raw_data', 'olist_orders')
+                  field: order_id
+          - name: payment_sequential
+            description: Ordinal of payment for the order
             tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
-          - name: Skin_Cancer
-            description: Skin cancer status
+              - not_null
+          - name: payment_type
+            description: Type of payment
             tests:
-              - accepted_values:
-                  values: ['Yes', 'No']
+              - not_null
+          - name: payment_installments
+            description: Number of installments
+            tests:
+              - not_null
+          - name: payment_value
+            description: Value of the payment
+            tests:
+              - not_null
+
+      - name: olist_order_reviews
+        description: Reviews for orders
+        columns:
+          - name: review_id
+            description: Primary key of review (not unique in raw)
+            tests:
+              - not_null
+          - name: order_id
+            description: Foreign key to orders
+            tests:
+              - relationships:
+                  to: source('sc_raw_data', 'olist_orders')
+                  field: order_id
+          - name: review_score
+            description: Score given in the review
+            tests:
+              - not_null
+          - name: review_comment_message
+            description: Message of the review comment
+          - name: review_creation_date
+            description: Review creation date (nullable in raw)
+          - name: review_answer_timestamp
+            description: Response timestamp of the review (nullable)
+
+      - name: olist_customers
+        description: Ecommerce customers
+        columns:
+          - name: customer_id
+            description: Primary key of customer
+            tests:
+              - not_null
+              - unique
+          - name: customer_unique_id
+            description: Unique ID (not strictly unique in raw)
+            tests:
+              - not_null
+          - name: customer_zip_code_prefix
+            description: Zip code prefix
+            tests:
+              - not_null
+          - name: customer_city
+            description: City
+            tests:
+              - not_null
+          - name: customer_state
+            description: State
+            tests:
+              - not_null
+
+      - name: olist_products
+        description: Product catalog
+        columns:
+          - name: product_id
+            description: Primary key of product
+            tests:
+              - not_null
+              - unique
+          - name: product_category_name
+            description: Category name in Portuguese (nullable)
+          - name: product_name_length
+            description: Length of the product name (nullable)
+          - name: product_description_length
+            description: Length of the product description (nullable)
+          - name: product_photos_qty
+            description: Quantity of product photos (nullable)
+          - name: product_weight_g
+            description: Weight of the product in grams (nullable)
+          - name: product_length_cm
+            description: Length of the product in centimeters (nullable)
+          - name: product_height_cm
+            description: Height of the product in centimeters (nullable)
+          - name: product_width_cm
+            description: Width of the product in centimeters (nullable)
+
+      - name: olist_sellers
+        description: Sellers information
+        columns:
+          - name: seller_id
+            description: Primary key of seller
+            tests:
+              - not_null
+              - unique
+          - name: seller_zip_code_prefix
+            description: Zip code prefix of the seller
+            tests:
+              - not_null
+          - name: seller_city
+            description: City of the seller
+            tests:
+              - not_null
+          - name: seller_state
+            description: State of the seller
+            tests:
+              - not_null
+
+      - name: olist_geolocation
+        description: Geolocation reference data
+        columns:
+          - name: geolocation_zip_code_prefix
+            description: Zip code prefix
+            tests:
+              - not_null
+          - name: geolocation_lat
+            description: Latitude
+            tests:
+              - not_null
+          - name: geolocation_lng
+            description: Longitude
+            tests:
+              - not_null
+          - name: geolocation_city
+            description: City
+          - name: geolocation_state
+            description: State
+
+      - name: product_category_name_translation
+        description: Product category translations
+        columns:
+          - name: product_category_name
+            description: Name of the product category
+            tests:
+              - not_null
+          - name: product_category_name_english
+            description: Name of the product category in English
+            tests:
+              - not_null
+
+      - name: raw_data_postgre
+        description: Web/app event stream from PostgreSQL
+        columns:
+          - name: event_id
+            description: Primary key of event
+            tests:
+              - not_null
+              - unique
+          - name: event_timestamp
+            description: Timestamp of the event
+            tests:
+              - not_null
+          - name: event_type
+            description: Type of the event
+            tests:
+              - not_null
