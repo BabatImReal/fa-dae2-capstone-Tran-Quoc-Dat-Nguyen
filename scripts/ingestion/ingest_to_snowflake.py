@@ -126,7 +126,7 @@ def create_table_if_not_exists(table_fqn: str, cols: list):
     """Create a table with VARCHAR columns (simple) plus LOADED_AT and SOURCE_SYSTEM."""
     table = sanitize_identifier(table_fqn)
     col_defs = ", ".join([f"{_sanitize_col(c)} VARCHAR" for c in cols])
-    col_defs += ", LOADED_AT TIMESTAMP_NTZ, SOURCE_SYSTEM VARCHAR"
+    col_defs += ", LOADED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(), SOURCE_SYSTEM VARCHAR DEFAULT 'csv'"
     create_sql = f"CREATE TABLE IF NOT EXISTS {table} ({col_defs})"
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(create_sql)
@@ -144,9 +144,14 @@ def load_csv_file_from_stage_to_table(table_fqn: str, stage_fqn: str, file_patte
     # Build target column list (sanitized) and append LOADED_AT/SOURCE_SYSTEM
     target_cols = ", ".join([_sanitize_col(c) for c in cols] + ["LOADED_AT", "SOURCE_SYSTEM"])
 
+    # For the SELECT in COPY, we need to specify the source columns plus default values
+    source_cols = ", ".join([f"${i+1}" for i in range(len(cols))])
     copy_sql = f"""
     COPY INTO {table} ({target_cols})
-    FROM @{stage}
+    FROM (
+        SELECT {source_cols}, CURRENT_TIMESTAMP(), 'csv'
+        FROM @{stage}
+    )
     FILE_FORMAT = (
       TYPE = CSV
       FIELD_DELIMITER = ','
