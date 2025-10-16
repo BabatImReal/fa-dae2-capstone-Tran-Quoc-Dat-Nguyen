@@ -7,7 +7,7 @@ snowflake:
 # PostgreSQL configuration
 postgresql:
   schema: "staging"
-  table: "hospital_transactions"
+  table: "user_events"
 
 paths:
   # Root directory where external datasets are stored
@@ -21,6 +21,31 @@ paths:
 
 # Column definitions
 columns:
+  # Columns for user events table
+  user_events:
+    - "event_id"
+    - "user_id"
+    - "session_id"
+    - "event_type"
+    - "event_timestamp"
+    - "user_agent"
+    - "ip_address"
+    - "page_url"
+    - "page_title"
+    - "referrer"
+    - "product_id"
+    - "product_name"
+    - "category"
+    - "price"
+    - "quantity"
+    - "search_query"
+    - "results_count"
+    - "filters_applied"
+    - "checkout_step"
+    - "cart_value"
+    - "item_count"
+    - "ingested_at"
+
   # Columns for each CSV/table in the olist brazilian ecommerce dataset
   olist_orders:
     - "order_id"
@@ -90,4 +115,3 @@ columns:
   product_category_name_translation:
     - "product_category_name"
     - "product_category_name_english"
-

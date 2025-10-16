@@ -28,7 +28,7 @@ config = load_config()
 # Use configuration values
 POSTGRES_SCHEMA = config['postgresql']['schema']
 POSTGRES_TABLE = config['postgresql']['table']
-HOSPITAL_TRANSACTION_COLS = config['columns']['hospital_transaction']
+USER_EVENT_COLS = config['columns']['user_events']
 
 # Load environment variables
 load_dotenv()
@@ -47,17 +47,16 @@ def get_connection():
     return psycopg.connect(**params)
 
 
-# Insert a list of music event records into the staging.music_transactions table
-
-def insert_hospital_transactions(records):
+# Insert a list of user event records into the staging.user_events table
+def insert_user_events(records):
     """
-    Insert a list of hospital transaction dicts into staging.hospital_transactions.
+    Insert a list of user event dicts into staging.user_events.
     Returns True if successful, False otherwise.
     """
     if not records:
         return False
 
-    columns = HOSPITAL_TRANSACTION_COLS
+    columns = USER_EVENT_COLS
     for col in columns:
         if not col.replace('_', '').isalnum():
             raise ValueError(f"Invalid column name: {col}")
@@ -71,7 +70,7 @@ def insert_hospital_transactions(records):
                         INSERT INTO {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
                         ({column_names})
                         VALUES ({placeholders})
-                        ON CONFLICT (transaction_id) DO NOTHING
+                        ON CONFLICT (event_id) DO NOTHING
                         """
                 for record in records:
                     values = tuple(record.get(col) for col in columns)
@@ -79,31 +78,30 @@ def insert_hospital_transactions(records):
             conn.commit()
         return True
     except Exception as e:
-        logger.error(f"Error inserting hospital transactions: {e}")
+        logger.error(f"Error inserting user events: {e}")
         return False
 
 
-# Main function to load and insert music transactions into PostgreSQL
-
+# Main function to load and insert user events into PostgreSQL
 def main():
-    """Main function to load and insert hospital transactions into PostgreSQL."""
+    """Main function to load and insert user events into PostgreSQL."""
     logger.info("💾 PostgreSQL Data Ingestion")
     logger.info("=" * 40)
 
-    # Find and load the latest hospital transactions file
-    logger.info("📁 Loading hospital transactions data...")
+    # Find and load the latest user events file
+    logger.info("📁 Loading user events data...")
     data_dir = Path(config['paths']['data_dir'])
 
     if not data_dir.exists():
         logger.error(f"Data directory not found: {data_dir}")
         return False
 
-    # Look for the latest fake hospital transactions file
-    json_files = sorted(data_dir.glob("fake_hospital_transactions_*.json"), reverse=True)
+    # Look for the latest user events file
+    json_files = sorted(data_dir.glob("user_event_*.json"), reverse=True)
     if not json_files:
-        logger.error(f"No hospital transaction files found in: {data_dir}")
+        logger.error(f"No user event files found in: {data_dir}")
         logger.info("📝 Please run the fake data generator first:")
-        logger.info("   uv run scripts/ingestion/collect_fake_data.py")
+        logger.info("   python scripts/ingestion/generate_user_events.py")
         return False
 
     data_path = json_files[0]  # Use the latest file
@@ -112,29 +110,35 @@ def main():
     # Load and validate JSON data
     try:
         with open(data_path, "r", encoding="utf-8") as f:
-            hospital_transactions = json.load(f)
+            user_events = json.load(f)
 
-        if not hospital_transactions:
+        if not user_events:
             logger.error("No data found in the file")
             return False
 
-        logger.info(f"📊 Loaded {len(hospital_transactions)} hospital transaction records")
+        logger.info(f"📊 Loaded {len(user_events)} user event records")
 
     except Exception as e:
         logger.error(f"Error loading data file: {e}")
         return False
 
+    # Add ingested_at timestamp to each record
+    from datetime import datetime
+    ingested_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    for record in user_events:
+        record["ingested_at"] = ingested_at
+
     # Insert data into PostgreSQL
     logger.info("💾 Inserting data into PostgreSQL...")
-    if insert_hospital_transactions(hospital_transactions):
+    if insert_user_events(user_events):
         logger.info(
-            f"✅ Successfully inserted {len(hospital_transactions)} records into "
+            f"✅ Successfully inserted {len(user_events)} records into "
             f"{POSTGRES_SCHEMA}.{POSTGRES_TABLE}"
         )
         logger.info("✅ Data ingestion completed successfully!")
         return True
     else:
-        logger.error("❌ Failed to insert hospital transactions")
+        logger.error("❌ Failed to insert user events")
         return False
 
 

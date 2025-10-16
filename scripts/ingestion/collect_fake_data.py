@@ -3,6 +3,8 @@
 # Standard library imports
 import csv
 import json
+import uuid
+from random import randint, choice, uniform, choices
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -120,23 +122,98 @@ class FakeDataGenerator:
         logger.info(f"Saved {len(data)} records to {file_path}")
         return file_path
 
+    def generate_user_events(self, count: int = 100) -> Path:
+        """Generate a JSON array of user events and save to data_dir with timestamped filename.
+
+        Filename format: user_event_DD_MM_YYYY_HH_MM.json
+        Event types: page_view, product_view, search, add_to_cart, remove_from_cart, checkout_click
+        """
+        # Prepare pools
+        users = [str(uuid.uuid4()) for _ in range(max(10, min(count // 10, 1000)))]
+        products = [str(uuid.uuid4()) for _ in range(max(50, min(count // 2, 5000)))]
+        
+        # Define event types and their weights for realistic distribution
+        event_types = [
+            'page_view', 'product_view', 'search', 'add_to_cart', 
+            'remove_from_cart', 'checkout_click'
+        ]
+
+        # Generate timestamp for filename
+        timestamp = datetime.now().strftime('%d_%m_%Y_%H_%M')
+        filename = f"user_event_{timestamp}.json"
+        path = self.sanitize_file_path(filename)
+
+        events = []
+        start_time = datetime.now() - timedelta(hours=2)  # Events in the last 2 hours
+        
+        for i in range(count):
+            user_id = choice(users)
+            session_id = str(uuid.uuid4())
+            
+            # Select event type
+            ev_type = choice(event_types)
+            
+            # Generate event timestamp with 5-minute intervals
+            event_time = start_time + timedelta(minutes=5 * i)
+            # Format timestamp according to project specification
+            ev_ts = event_time.strftime("%Y-%m-%d %H:%M:%S")
+
+            # Create event with consistent structure
+            event = {
+                'event_id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'session_id': session_id,
+                'event_type': ev_type,
+                'event_timestamp': ev_ts,
+                'user_agent': self.fake.user_agent(),
+                'ip_address': self.fake.ipv4_public(),
+                'page_url': self.fake.uri(),
+                'page_title': self.fake.sentence(nb_words=6),
+                'referrer': self.fake.uri(),
+                'product_id': choice(products),
+                'product_name': self.fake.sentence(nb_words=3),
+                'category': self.fake.word(ext_word_list=['Electronics', 'Clothing', 'Home', 'Books', 'Sports']),
+                'price': round(uniform(5.0, 500.0), 2),
+                'quantity': randint(1, 5),
+                'search_query': self.fake.sentence(nb_words=randint(1, 5)),
+                'results_count': randint(0, 100),
+                'filters_applied': self.fake.boolean(chance_of_getting_true=30),
+                'checkout_step': choice(['cart_review', 'shipping_info', 'payment_info', 'order_confirmation']),
+                'cart_value': round(uniform(10.0, 2000.0), 2),
+                'item_count': randint(1, 15)
+            }
+
+            events.append(event)
+
+        with open(path, 'w', encoding='utf-8') as fh:
+            json.dump(events, fh, ensure_ascii=False, indent=2)
+
+        logger.info(f"Wrote {len(events)} user events to {path}")
+        return path
+
 
 # Main function to demonstrate fake data generation and saving
 def main():
     """Main function to demonstrate fake data generation."""
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument('--events', '-m', type=int, default=100, help='Number of user events to generate')
+    parser.add_argument('--out', type=str, default=None, help='Output folder for generated file (overrides config data_dir)')
+    args = parser.parse_args()
     generator = FakeDataGenerator()
 
+    # Allow overriding default output directory
+    if args.out:
+        out_path = Path(args.out)
+        out_path.mkdir(parents=True, exist_ok=True)
+        generator.data_dir = out_path
 
     try:
-        # Generate fake hospital transaction data
-        hospital_transactions = generator.add_ingested_at(
-            generator.generate_hospital_transaction_data(100)
-        )
-        # Save in different formats
-        generator.save_data_as_json(hospital_transactions, "fake_hospital_transactions")
-        logger.info("Fake hospital transaction data generation completed successfully!")
+        generator.generate_user_events(count=args.events)
+        logger.info("User event generation completed successfully!")
     except Exception as e:
-        logger.error(f"Fake data generation failed: {e}")
+        logger.error(f"User event generation failed: {e}")
         raise
 
 

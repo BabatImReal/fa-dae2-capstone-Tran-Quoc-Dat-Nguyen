@@ -96,16 +96,27 @@ def load_postgres_to_snowflake():
 
     query = f"""
         SELECT 
-            transaction_id,
-            patient_id,
-            admission_id,
-            department,
-            doctor,
-            service,
-            cost,
-            payment_method,
-            transaction_time,
-            status,
+            event_id,
+            user_id,
+            session_id,
+            event_type,
+            event_timestamp,
+            user_agent,
+            ip_address,
+            page_url,
+            page_title,
+            referrer,
+            product_id,
+            product_name,
+            category,
+            price,
+            quantity,
+            search_query,
+            results_count,
+            filters_applied,
+            checkout_step,
+            cart_value,
+            item_count,
             ingested_at
         FROM {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
         ORDER BY ingested_at
@@ -128,13 +139,13 @@ def load_postgres_to_snowflake():
     # -------------------------------
     # Transform: type conversions
     # -------------------------------
-    uuid_cols = ["transaction_id", "patient_id", "admission_id"]
+    uuid_cols = ["event_id", "user_id", "session_id", "product_id"]
     for col in uuid_cols:
         if col in df.columns:
             df[col] = df[col].astype(str)
 
     # Convert timestamp columns to strings for Snowflake compatibility
-    ts_cols = ["transaction_time", "ingested_at"]
+    ts_cols = ["event_timestamp", "ingested_at"]
     for col in ts_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
@@ -177,7 +188,7 @@ def load_postgres_to_snowflake():
     # Final safety check and fix
     # -------------------------------
     # Ensure timestamp columns are string type before write_pandas()
-    for col in ["TRANSACTION_TIME", "INGESTED_AT"]:
+    for col in ["EVENT_TIMESTAMP", "INGESTED_AT"]:
         if col in df.columns:
             df[col] = df[col].astype(str)
 
