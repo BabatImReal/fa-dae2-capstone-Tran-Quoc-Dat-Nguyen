@@ -4,6 +4,8 @@ from pathlib import Path
 import kaggle
 import pandas as pd
 import yaml
+import zipfile
+import shutil
 
 logging.basicConfig(
     level=logging.INFO,
@@ -11,32 +13,90 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def load_config():
     with open("config.yaml", 'r') as file:
         return yaml.safe_load(file)
 
+
 config = load_config()
 DATA_DIR = config['paths']['data_dir']
-BATCH_DATASET = config['paths']['batch_dataset']
+# Kaggle dataset identifier, e.g. 'olistbr/brazilian-ecommerce'
+BATCH_DATASET_ID = config['paths'].get('batch_dataset_id')
+# Local folder to extract dataset files to
+DLT_INPUT_DIR = Path(config['paths'].get('dlt_input_dir', str(Path(DATA_DIR) / 'olistbr_brazilian_ecommerce')))
+# Optional preview file name within the dataset
+BATCH_PREVIEW = config['paths'].get('batch_dataset_preview')
 
-def get_dataset_path():
-    # Returns the absolute path to the heart disease dataset
-    return str(Path(DATA_DIR) / BATCH_DATASET)
 
-# Download the heart disease dataset from Kaggle if not present
-kaggle.api.authenticate()
-dataset_path = get_dataset_path()
-if not Path(dataset_path).exists():
-    kaggle.api.dataset_download_files(
-        "kamilpytlak/personal-key-indicators-of-heart-disease", path=DATA_DIR, unzip=True
-    )
-    logger.info(f"Downloaded heart disease dataset to {DATA_DIR}")
-else:
-    logger.info(f"Dataset already exists at {dataset_path}")
+def get_preview_path():
+    if BATCH_PREVIEW:
+        return DLT_INPUT_DIR / BATCH_PREVIEW
+    return DLT_INPUT_DIR
 
-# Load and print the dataset head
-if Path(dataset_path).exists():
-    df = pd.read_csv(dataset_path)
-    print(df.head())
-else:
-    logger.error(f"Dataset file not found at {dataset_path}")
+
+def main():
+    kaggle.api.authenticate()
+
+    # Ensure the target extraction directory exists
+    dltdir = DLT_INPUT_DIR
+    dltdir.mkdir(parents=True, exist_ok=True)
+
+    if not BATCH_DATASET_ID:
+        logger.error("No 'batch_dataset_id' set in config.paths; nothing to download.")
+        return
+
+    # Download Kaggle dataset archive into DATA_DIR
+    try:
+        logger.info(f"Downloading dataset {BATCH_DATASET_ID} to {DATA_DIR}...")
+        kaggle.api.dataset_download_files(BATCH_DATASET_ID, path=DATA_DIR, unzip=False)
+
+        dataset_slug = BATCH_DATASET_ID.split('/')[-1]
+        zip_path = Path(DATA_DIR) / f"{dataset_slug}.zip"
+        if zip_path.exists():
+            logger.info(f"Extracting {zip_path} to {dltdir}...")
+            with zipfile.ZipFile(zip_path, 'r') as zf:
+                zf.extractall(dltdir)
+            try:
+                zip_path.unlink()
+            except Exception:
+                pass
+            logger.info(f"Dataset extracted to {dltdir}")
+        else:
+            # Some Kaggle downloads may produce individual files in DATA_DIR
+            logger.info(f"No archive {zip_path} found; checking for files in {DATA_DIR}")
+            for p in Path(DATA_DIR).iterdir():
+                if p.suffix.lower() in ['.csv', '.json']:
+                    shutil.copy(p, dltdir / p.name)
+    except Exception as e:
+        logger.exception("Failed to download dataset from Kaggle: %s", e)
+        return
+
+    # List CSV files in the target folder and preview one if available
+    csv_files = sorted([p for p in dltdir.rglob('*.csv')])
+    if csv_files:
+        logger.info(f"Found {len(csv_files)} CSV file(s) under {dltdir}:")
+        for p in csv_files:
+            try:
+                display_path = p.relative_to(Path.cwd())
+            except Exception:
+                display_path = p
+            logger.info(f" - {display_path}")
+    else:
+        logger.warning(f"No CSV files found under {dltdir}")
+
+    preview_path = get_preview_path()
+    if preview_path.exists() and preview_path.suffix.lower() == '.csv':
+        logger.info(f"Previewing {preview_path}:")
+        df = pd.read_csv(preview_path, nrows=5)
+        print(df.head())
+    else:
+        if BATCH_PREVIEW:
+            logger.warning(f"Configured preview file {preview_path} not found.")
+        else:
+            logger.info("No preview file configured; finished listing files.")
+
+
+if __name__ == "__main__":
+    main()
+    main()
