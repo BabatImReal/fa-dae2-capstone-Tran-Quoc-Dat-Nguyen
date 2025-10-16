@@ -5,18 +5,29 @@
 CREATE SCHEMA IF NOT EXISTS staging;
 
 
--- Create hospital_transactions table for hospital transaction fake data
-CREATE TABLE IF NOT EXISTS staging.hospital_transactions (
-    transaction_id UUID PRIMARY KEY,
-    patient_id UUID,
-    admission_id UUID,
-    department VARCHAR(100),
-    doctor VARCHAR(100),
-    service VARCHAR(255),
-    cost NUMERIC(10,2),
-    payment_method VARCHAR(50),
-    transaction_time TIMESTAMP,
-    status VARCHAR(20),
+-- Create user_events table for user event fake data
+CREATE TABLE IF NOT EXISTS staging.user_events (
+    event_id UUID PRIMARY KEY,
+    user_id UUID,
+    session_id UUID,
+    event_type VARCHAR(50),
+    event_timestamp TIMESTAMP,
+    user_agent TEXT,
+    ip_address VARCHAR(45),
+    page_url TEXT,
+    page_title TEXT,
+    referrer TEXT,
+    product_id UUID,
+    product_name TEXT,
+    category VARCHAR(100),
+    price NUMERIC(10,2),
+    quantity INTEGER,
+    search_query TEXT,
+    results_count INTEGER,
+    filters_applied BOOLEAN,
+    checkout_step VARCHAR(50),
+    cart_value NUMERIC(10,2),
+    item_count INTEGER,
     ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
