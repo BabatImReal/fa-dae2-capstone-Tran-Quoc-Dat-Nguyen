@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: stg__order_reviews
+    description: "Staged olist_order_reviews"
+    columns:
+      - name: review_id
+        tests:
+          - not_null
+      - name: order_id
+        tests:
+          - relationships:
+              to: ref('stg__orders')
+              field: order_id
+      - name: review_score
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 5
+      - name: review_creation_date
+      - name: review_answer_timestamp

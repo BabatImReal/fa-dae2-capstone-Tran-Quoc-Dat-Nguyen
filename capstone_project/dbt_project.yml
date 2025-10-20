@@ -36,3 +36,6 @@ seeds:
     +column_types:
       id: integer
       created_at: timestamp
+
+vars:
+  surrogate_key_treat_nulls_as_empty_strings: True

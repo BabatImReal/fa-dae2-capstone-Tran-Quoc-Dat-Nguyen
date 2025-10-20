@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg__customers
+    description: "Staged olist_customers"
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_unique_id
+        tests:
+          - not_null
+      - name: customer_zip_code_prefix
+        tests:
+          - not_null
+      - name: customer_city
+        tests:
+          - not_null
+      - name: customer_state
+        tests:
+          - not_null

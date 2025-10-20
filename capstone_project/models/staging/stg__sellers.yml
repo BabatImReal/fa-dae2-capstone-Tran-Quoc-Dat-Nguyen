@@ -1,0 +1,19 @@
+version: 2
+
+models:
+    - name: stg__sellers
+      description: "Staged olist_sellers"
+      columns:
+        - name: seller_id
+          tests:
+            - not_null
+            - unique
+        - name: seller_zip_code_prefix
+          tests:
+            - not_null
+        - name: seller_city
+          tests:
+            - not_null
+        - name: seller_state
+          tests:
+            - not_null
