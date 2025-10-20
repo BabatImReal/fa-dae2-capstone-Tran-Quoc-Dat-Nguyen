@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg__product_category_name_translation
+    description: "Staged product_category_name_translation"
+    columns:
+      - name: product_category_name
+        tests:
+          - not_null
+      - name: product_category_name_english
+        tests:
+          - not_null

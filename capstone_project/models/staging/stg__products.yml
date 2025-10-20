@@ -1,0 +1,10 @@
+version: 2
+
+models:
+    - name: stg__products
+      description: "Staged olist_products"
+      columns:
+        - name: product_id
+          tests:
+            - not_null
+            - unique
