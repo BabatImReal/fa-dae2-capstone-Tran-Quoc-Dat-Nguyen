@@ -2,7 +2,7 @@
 {{ config(materialized='ephemeral') }}
 
 select
-  {{ dbt_utils.generate_surrogate_key(['product_id']) }} as product_sk,
+  {{ dbt_utils.generate_surrogate_key(['product_id']) }} as product_key,
   p.product_id,
   p.product_name_length,
   p.product_description_length,
@@ -16,4 +16,3 @@ select
 from {{ ref('stg__products') }} p
 left join {{ ref('stg__product_category_name_translation') }} t
   on p.product_category_name = t.product_category_name
-;
