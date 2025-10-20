@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: dim_order_reviews
+    description: "Order reviews dimension (latest review used in fact)."
+    columns:
+      - name: order_review_key
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg__orders')
+                field: order_id
+      - name: review_score
+        tests:
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]

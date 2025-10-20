@@ -11,7 +11,7 @@ with src as (
 
 select
   -- surrogate key
-  {{ dbt_utils.generate_surrogate_key(['product_id']) }} as product_key
+  {{ dbt_utils.generate_surrogate_key(['product_id']) }} as product_key,
   -- natural/business keys and attributes
   product_id,
   product_category_english,

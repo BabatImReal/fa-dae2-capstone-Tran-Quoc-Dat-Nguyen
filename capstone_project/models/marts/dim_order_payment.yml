@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: dim_order_payment
+    description: "Order payments dimension at order grain."
+    columns:
+      - name: order_payment_key
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg__orders')
+                field: order_id
+      - name: primary_payment_type
+        tests:
+          - accepted_values:
+              values: [credit_card, boleto, voucher, debit_card, not_defined]
