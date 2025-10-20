@@ -47,3 +47,10 @@ models:
               arguments:
                 to: ref('dim_order_reviews')
                 field: order_review_key
+      - name: product_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+          - not_null
