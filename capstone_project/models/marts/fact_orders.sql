@@ -42,6 +42,7 @@ int_order_items as (
   select
     order_id,
     customer_id,
+    product_id,
     seller_id,
     order_status,
     shipping_date,
@@ -52,6 +53,13 @@ int_order_items as (
     delivered_after_sla_days,
     order_check_flag
   from {{ ref('int__order_items') }}
+),
+dim_product as (
+    select 
+        product_id,
+        product_key,                  -- ADDED
+        product_category_english
+    from {{ ref('dim_products') }}
 )
 
 select
@@ -62,7 +70,9 @@ select
   c.customer_key,
   s.seller_key,
   p.order_payment_key,
-  r.order_review_key,                     
+  r.order_review_key,
+  dp.product_key,             -- ADDED
+  dp.product_category_english,               -- ADDED
 
   -- natural ids (traceability)
   o.customer_id,
@@ -84,7 +94,7 @@ select
   ioi.shipping_sla_days,
   ioi.delivered_after_sla_days,
   ioi.order_check_flag,
-  r.review_score as review_score, 
+  r.review_score as review_score,
 
   -- metadata
   o.loaded_at,
@@ -99,8 +109,10 @@ left join dim_sellers s
 left join dim_order_payment p
   on o.order_id = p.order_id
 left join (
-  select order_id, order_review_key, review_score 
+  select order_id, order_review_key, review_score
   from dim_order_reviews
   where rn = 1
 ) r
   on o.order_id = r.order_id
+left join dim_product dp
+  on dp.product_id = ioi.product_id
