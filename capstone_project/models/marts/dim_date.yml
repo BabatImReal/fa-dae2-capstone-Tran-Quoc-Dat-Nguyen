@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: "Date dimension."
+    columns:
+      - name: date_id
+        tests:
+          - not_null
+          - unique
+      - name: month
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 12
+              inclusive: true
+      - name: day
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 31
+              inclusive: true
+      - name: day_of_year
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 366
+              inclusive: true
+      - name: quarter
+        tests:
+          - accepted_values:
+              values: [1, 2, 3, 4]
+      - name: is_weekend
+        tests:
+          - accepted_values:
+              values: [true, false]
+      - name: is_today
+        tests:
+          - accepted_values:
+              values: [true, false]

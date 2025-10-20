@@ -1,0 +1,49 @@
+version: 2
+models:
+  - name: fact_orders
+    description: "Order fact at order grain."
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg__orders')
+                field: order_id
+      - name: order_status
+        tests:
+          - accepted_values:
+              values:
+                - created
+                - approved
+                - invoiced
+                - processing
+                - shipped
+                - delivered
+                - canceled
+                - unavailable
+      - name: customer_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_key
+      - name: seller_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_key
+      - name: order_payment_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_order_payment')
+                field: order_payment_key
+      - name: order_review_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_order_reviews')
+                field: order_review_key
