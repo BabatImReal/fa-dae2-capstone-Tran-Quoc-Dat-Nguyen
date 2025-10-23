@@ -11,7 +11,7 @@ with src as (
 
 select
   -- surrogate key
-  {{ dbt_utils.generate_surrogate_key(['product_id']) }} as product_key,
+  {{ dbt_utils.generate_surrogate_key(['product_id', 'loaded_at']) }} as product_key,
   -- natural/business keys and attributes
   product_id,
   product_category_english,
@@ -23,6 +23,5 @@ select
   product_height_cm,
   product_width_cm,
   -- metadata
-  loaded_at,
-  current_timestamp() as dbt_updated_at
+  loaded_at
 from src

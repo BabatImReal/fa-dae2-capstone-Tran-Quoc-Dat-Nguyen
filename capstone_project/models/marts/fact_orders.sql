@@ -1,6 +1,7 @@
 {{ config(
     materialized = 'incremental',
-    unique_key='order_id'
+    unique_key='order_id',
+    incremental_strategy='append'  
 ) }}
 
 with orders as (
@@ -14,7 +15,11 @@ with orders as (
   {% endif %}
 ),
 dim_customers as (
-  select customer_id, customer_key
+  select
+    customer_id,
+    customer_key,
+    effective_from,   -- added
+    effective_to      -- added
   from {{ ref('dim_customers') }}
 ),
 dim_sellers as (
@@ -64,7 +69,8 @@ dim_product as (
 
 select
   -- natural key
-  o.order_id,
+  {{ dbt_utils.generate_surrogate_key(['o.order_id', 'o.loaded_at']) }} as order_key,
+  o.order_id,  
 
   -- dimension surrogate keys
   c.customer_key,
@@ -97,13 +103,16 @@ select
   r.review_score as review_score,
 
   -- metadata
-  o.loaded_at,
-  current_timestamp() as dbt_updated_at
+  o.loaded_at
 from orders o
 left join int_order_items ioi
   on o.order_id = ioi.order_id
+
 left join dim_customers c
   on o.customer_id = c.customer_id
+ and o.order_purchase_timestamp
+     between c.effective_from and c.effective_to
+
 left join dim_sellers s
   on ioi.seller_id = s.seller_id
 left join dim_order_payment p

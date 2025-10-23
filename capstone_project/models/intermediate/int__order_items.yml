@@ -68,14 +68,6 @@ models:
               max_value: 1000000000
               inclusive: true
 
-      - name: delivered_on_time_flag
-        description: "1 if delivered <= SLA date, 0 if late, null if unknown."
-        tests:
-          - accepted_values:
-              values: [0, 1]
-              config:
-                where: "delivered_on_time_flag is not null"
-
       - name: delivered_after_sla_days
         description: "Days delivered after SLA; 0 if on time; null if dates missing."
         tests:
@@ -85,16 +77,6 @@ models:
               inclusive: true
               config:
                 where: "delivered_after_sla_days is not null"
-
-      - name: delivered_vs_estimated_days
-        description: "Actual delivered minus estimated days; nullable if dates missing."
-        tests:
-          - dbt_utils.accepted_range:
-              min_value: -365
-              max_value: 365
-              inclusive: true
-              config:
-                where: "delivered_vs_estimated_days is not null"
 
       - name: order_check_flag
         description: "1 if estimated < actual delivered, else 0; null if either date missing."

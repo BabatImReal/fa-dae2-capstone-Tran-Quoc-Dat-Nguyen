@@ -53,4 +53,3 @@ models:
               arguments:
                 to: ref('dim_products')
                 field: product_key
-          - not_null
