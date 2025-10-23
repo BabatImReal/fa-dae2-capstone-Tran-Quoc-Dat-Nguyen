@@ -49,7 +49,7 @@ order_agg as (
 )
 
 select
-  {{ dbt_utils.generate_surrogate_key(['oa.order_id']) }} as order_payment_key,
+  {{ dbt_utils.generate_surrogate_key(['oa.order_id', 'oa.loaded_at']) }} as order_payment_key,
   oa.order_id,
   pt.primary_payment_type,
   oa.payment_types_count,
@@ -57,8 +57,7 @@ select
   oa.total_payment_value,
   oa.max_installments,
   oa.has_installments_flag,
-  oa.loaded_at,
-  current_timestamp() as dbt_updated_at
+  oa.loaded_at
 from order_agg oa
 left join primary_type pt
   on oa.order_id = pt.order_id

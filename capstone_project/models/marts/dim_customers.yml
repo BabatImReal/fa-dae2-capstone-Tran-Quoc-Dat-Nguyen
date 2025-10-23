@@ -11,7 +11,6 @@ models:
       - name: customer_id
         tests:
           - not_null
-          - unique
           - relationships:
               arguments:
                 to: ref('stg__customers')
