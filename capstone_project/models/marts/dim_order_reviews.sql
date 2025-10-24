@@ -4,18 +4,17 @@
 ) }}
 
 with src as (
-  select
-    *
-  from {{ ref('stg__order_reviews') }}
+    select *
+    from {{ ref('stg__order_reviews') }}
 )
 
 select
-  {{ dbt_utils.generate_surrogate_key(['review_id', 'order_id']) }} as order_review_key,
-  review_id,
-  order_id,
-  review_score,
-  review_creation_date,
-  review_answer_timestamp,
-  -- metadata
-  loaded_at
+    {{ dbt_utils.generate_surrogate_key(['review_id', 'order_id']) }} as order_review_key,
+    review_id,
+    order_id,
+    review_score,
+    review_creation_date,
+    review_answer_timestamp,
+    -- metadata
+    loaded_at
 from src

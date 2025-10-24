@@ -1,14 +1,16 @@
 {{ config(materialized='view') }}
 
-WITH source AS (
-  SELECT * FROM {{ source('sc_raw_data', 'product_category_name_translation') }}
+with source as (
+    select * from {{ source('sc_raw_data', 'product_category_name_translation') }}
 ),
-renamed AS (
-  SELECT
-    CAST(product_category_name AS VARCHAR)          AS product_category_name,
-    CAST(product_category_name_english AS VARCHAR)  AS product_category_name_english,
-    CAST(loaded_at AS TIMESTAMP_NTZ)                AS loaded_at,
-    CAST(source_system AS VARCHAR)                  AS source_system
-  FROM source
+
+renamed as (
+    select
+        CAST(product_category_name as VARCHAR) as product_category_name,
+        CAST(product_category_name_english as VARCHAR) as product_category_name_english,
+        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
+        CAST(source_system as VARCHAR) as source_system
+    from source
 )
-SELECT * FROM renamed
+
+select * from renamed
