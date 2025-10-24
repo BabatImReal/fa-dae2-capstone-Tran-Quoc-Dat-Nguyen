@@ -1,0 +1,12 @@
+# dbt specific directories
+target/
+dbt_packages/
+macros/
+
+# Non-dbt SQL files
+scripts/
+.venv/
+
+# Generated files
+*.pyc
+__pycache__/

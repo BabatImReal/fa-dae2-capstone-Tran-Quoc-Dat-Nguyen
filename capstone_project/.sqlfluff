@@ -1,0 +1,63 @@
+[sqlfluff]
+# Database dialect (Snowflake, BigQuery, PostgreSQL, etc.)
+dialect = snowflake
+
+# Templater for dbt projects
+templater = dbt
+
+# General settings
+runaway_limit = 10
+max_line_length = 200
+indent_unit = space
+
+# Exclude specific rules if needed
+exclude_rules = RF02, AM06
+
+# Indentation settings
+[sqlfluff:indentation]
+tab_space_size = 4
+
+# Layout and formatting
+[sqlfluff:layout:type:comma]
+spacing_before = touch
+line_position = trailing
+
+# Capitalization rules
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+# Aliasing rules
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.expression]
+allow_scalar = False
+
+# Column reference rules
+[sqlfluff:rules:ambiguous.column_references]
+group_by_and_order_by_style = implicit
+
+# dbt templater configuration
+[sqlfluff:templater:dbt]
+project_dir = D:/Data/Foundry_AI/projects/fa-dae2-capstone-Tran-Quoc-Dat-Nguyen/capstone_project
+profiles_dir = D:/Data/Foundry_AI/projects/fa-dae2-capstone-Tran-Quoc-Dat-Nguyen/capstone_project/.dbt
+profile = capstone_project
+target = dev
+dbt_skip_compilation_error = True
+dbt_skip_connection_error = True
+
+# Enable dbt builtins for Jinja templater
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
