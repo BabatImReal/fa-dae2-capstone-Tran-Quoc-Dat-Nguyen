@@ -4,17 +4,17 @@
 ) }}
 
 with src as (
-  select
-    *
-  from {{ ref('stg__sellers') }}
+    select *
+    from {{ ref('stg__sellers') }}
 )
+
 select
-  {{ dbt_utils.generate_surrogate_key(['seller_id', 'loaded_at']) }} as seller_key,
-  s.seller_id,
-  s.seller_zip_code_prefix,
-  s.seller_city,
-  s.seller_state,
-  s.loaded_at
-  -- add any additional staged columns here if present
-  -- , s.<other_column>
-from src s
+    {{ dbt_utils.generate_surrogate_key(['seller_id', 'loaded_at']) }} as seller_key,
+    seller_id,
+    seller_zip_code_prefix,
+    seller_city,
+    seller_state,
+    loaded_at
+-- add any additional staged columns here if present
+-- , s.<other_column>
+from src

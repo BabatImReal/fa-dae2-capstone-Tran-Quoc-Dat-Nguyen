@@ -1,19 +1,21 @@
 {{ config(materialized='view') }}
 
-WITH source AS (
-    SELECT * FROM {{ source('sc_raw_data', 'olist_order_items')}}
+with source as (
+    select * from {{ source('sc_raw_data', 'olist_order_items') }}
 ),
-renamed AS (
-    SELECT  
-        CAST(order_id AS VARCHAR)                         AS order_id,
-        CAST(order_item_id AS NUMBER)                    AS order_item_id,
-        CAST(product_id AS VARCHAR)                       AS product_id,
-        CAST(seller_id AS VARCHAR)                        AS seller_id,
-        CAST(shipping_limit_date AS TIMESTAMP_NTZ)        AS shipping_limit_date,
-        CAST(price AS NUMBER(12,2))                       AS price,
-        CAST(freight_value AS NUMBER(12,2))               AS freight_value,
-        CAST(loaded_at AS TIMESTAMP_NTZ)                  AS loaded_at,
-        CAST(source_system AS VARCHAR)                    AS source_system
-    FROM source
+
+renamed as (
+    select
+        CAST(order_id as VARCHAR) as order_id,
+        CAST(order_item_id as NUMBER) as order_item_id,
+        CAST(product_id as VARCHAR) as product_id,
+        CAST(seller_id as VARCHAR) as seller_id,
+        CAST(shipping_limit_date as TIMESTAMP_NTZ) as shipping_limit_date,
+        CAST(price as NUMBER(12, 2)) as price,
+        CAST(freight_value as NUMBER(12, 2)) as freight_value,
+        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
+        CAST(source_system as VARCHAR) as source_system
+    from source
 )
-SELECT * FROM renamed
+
+select * from renamed

@@ -1,17 +1,19 @@
 {{ config(materialized='view') }}
 
-WITH source AS (
-  SELECT * FROM {{ source('sc_raw_data', 'olist_geolocation') }}
+with source as (
+    select * from {{ source('sc_raw_data', 'olist_geolocation') }}
 ),
-renamed AS (
-  SELECT
-    CAST(geolocation_zip_code_prefix AS VARCHAR) AS geolocation_zip_code_prefix,
-    CAST(geolocation_lat AS NUMBER(12,8))        AS geolocation_lat,
-    CAST(geolocation_lng AS NUMBER(12,8))        AS geolocation_lng,
-    CAST(geolocation_city AS VARCHAR)            AS geolocation_city,
-    CAST(geolocation_state AS VARCHAR)           AS geolocation_state,
-    CAST(loaded_at AS TIMESTAMP_NTZ)             AS loaded_at,
-    CAST(source_system AS VARCHAR)               AS source_system
-  FROM source
+
+renamed as (
+    select
+        CAST(geolocation_zip_code_prefix as VARCHAR) as geolocation_zip_code_prefix,
+        CAST(geolocation_lat as NUMBER(12, 8)) as geolocation_lat,
+        CAST(geolocation_lng as NUMBER(12, 8)) as geolocation_lng,
+        CAST(geolocation_city as VARCHAR) as geolocation_city,
+        CAST(geolocation_state as VARCHAR) as geolocation_state,
+        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
+        CAST(source_system as VARCHAR) as source_system
+    from source
 )
-SELECT * FROM renamed
+
+select * from renamed

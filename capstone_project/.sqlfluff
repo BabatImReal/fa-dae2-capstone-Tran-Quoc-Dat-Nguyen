@@ -43,7 +43,7 @@ aliasing = explicit
 aliasing = explicit
 
 [sqlfluff:rules:aliasing.expression]
-allow_scalar = False
+allow_scalar = True
 
 # Column reference rules
 [sqlfluff:rules:ambiguous.column_references]

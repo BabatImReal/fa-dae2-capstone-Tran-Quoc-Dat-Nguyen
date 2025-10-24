@@ -1,21 +1,23 @@
 {{ config(materialized='view') }}
 
-WITH source AS (
-  SELECT * FROM {{ source('sc_raw_data', 'olist_products') }}
+with source as (
+    select * from {{ source('sc_raw_data', 'olist_products') }}
 ),
-renamed AS (
-  SELECT
-    CAST(product_id AS VARCHAR)                         AS product_id,
-    CAST(product_category_name AS VARCHAR)              AS product_category_name,
-    CAST(product_name_length AS NUMBER)                 AS product_name_length,
-    CAST(product_description_length AS NUMBER)          AS product_description_length,
-    CAST(product_photos_qty AS NUMBER)                  AS product_photos_qty,
-    CAST(product_weight_g AS NUMBER(12,4))              AS product_weight_g,
-    CAST(product_length_cm AS NUMBER(12,4))             AS product_length_cm,
-    CAST(product_height_cm AS NUMBER(12,4))             AS product_height_cm,
-    CAST(product_width_cm AS NUMBER(12,4))              AS product_width_cm,
-    CAST(loaded_at AS TIMESTAMP_NTZ)                    AS loaded_at,
-    CAST(source_system AS VARCHAR)                      AS source_system
-  FROM source
+
+renamed as (
+    select
+        CAST(product_id as VARCHAR) as product_id,
+        CAST(product_category_name as VARCHAR) as product_category_name,
+        CAST(product_name_length as NUMBER) as product_name_length,
+        CAST(product_description_length as NUMBER) as product_description_length,
+        CAST(product_photos_qty as NUMBER) as product_photos_qty,
+        CAST(product_weight_g as NUMBER(12, 4)) as product_weight_g,
+        CAST(product_length_cm as NUMBER(12, 4)) as product_length_cm,
+        CAST(product_height_cm as NUMBER(12, 4)) as product_height_cm,
+        CAST(product_width_cm as NUMBER(12, 4)) as product_width_cm,
+        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
+        CAST(source_system as VARCHAR) as source_system
+    from source
 )
-SELECT * FROM renamed
+
+select * from renamed
