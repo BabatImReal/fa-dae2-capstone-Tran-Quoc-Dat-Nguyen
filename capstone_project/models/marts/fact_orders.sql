@@ -2,17 +2,12 @@
     materialized = 'incremental',
     unique_key='order_key',
     schema='sc_analytics',
-    incremental_strategy='append'  
+    incremental_strategy='merge'
 ) }}
 
 with orders as (
     select o.*
     from {{ ref('stg__orders') }} as o
-    {% if is_incremental() %}
-        where o.loaded_at > (
-            select coalesce(max(loaded_at), cast('1900-01-01' as timestamp_ntz)) from {{ this }}
-        )
-    {% endif %}
 ),
 
 dim_customers as (
@@ -96,7 +91,7 @@ select
     s.seller_key,
     p.order_payment_key,
     r.order_review_key,
-    dp.product_key,     
+    dp.product_key,
     dp.product_id,        -- ADDED
     dp.product_category_english,               -- ADDED
 
@@ -123,7 +118,9 @@ select
     r.review_score,
 
     -- metadata
-    o.loaded_at
+    o.loaded_at,
+    current_timestamp() as dbt_updated_at   -- ensure compiled tmp has this column for MERGE
+
 from orders as o
 left join int_order_items as ioi
     on o.order_id = ioi.order_id
@@ -142,3 +139,17 @@ left join first_review_record as r
     on o.order_id = r.order_id
 left join dim_product as dp
     on ioi.product_id = dp.product_id
+
+{% if is_incremental() %}
+    where
+        o.loaded_at > (
+            select coalesce(max(loaded_at), cast('1900-01-01' as timestamp_ntz)) from {{ this }}
+        )
+        and (
+            o.order_id not in (select order_id from {{ this }})
+            or o.customer_id not in (select customer_id from {{ this }})
+            or o.order_purchase_timestamp > (
+                select coalesce(max(order_purchase_timestamp), cast('1900-01-01' as timestamp_ntz)) from {{ this }}
+            )
+        )
+{% endif %}
