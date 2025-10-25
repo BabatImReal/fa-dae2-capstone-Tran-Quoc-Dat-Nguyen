@@ -21,7 +21,7 @@ jobs:
       SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}_${{ github.event.number }}
       SNOWFLAKE_CI_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
       SNOWFLAKE_CI_PRIVATE_KEY_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-      DBT_PROFILES_DIR: ./.dbt
+      DBT_PROFILES_DIR: ${{ github.workspace }}/capstone_project/.dbt
       DBT_PROJECT_DIR: .
 
     steps:
@@ -39,6 +39,12 @@ jobs:
             echo "ERROR: capstone_project directory not found at repo root."
             exit 1
           fi
+      - name: Debug: show DBT_PROFILES_DIR and list it
+          run: |
+            echo "DBT_PROFILES_DIR=$DBT_PROFILES_DIR"
+            echo "Listing contents (if any):"
+            ls -la "$DBT_PROFILES_DIR" || true
+          shell: bash
 
       - name: Setup Python
         uses: actions/setup-python@v4
