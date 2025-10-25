@@ -55,15 +55,19 @@ jobs:
       - name: Run dbt debug
         run: |
           uv run dbt debug -t ci
+        working-directory: ${{ env.DBT_PROJECT_DIR}}
 
       - name: Run SQLFluff lint
         run: |
           uv run sqlfluff lint
+        working-directory: ${{ env.DBT_PROJECT_DIR}}
 
       - name: Run dbt deps
         run: |
           uv run dbt deps -t ci
+        working-directory: ${{ env.DBT_PROJECT_DIR}}
 
       - name: Run dbt tests
         run: |
           uv run dbt test -t ci
+        working-directory: ${{ env.DBT_PROJECT_DIR}}
