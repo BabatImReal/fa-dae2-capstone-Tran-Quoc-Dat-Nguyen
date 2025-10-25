@@ -1,5 +1,6 @@
 {{ config(
   materialized='table',
+  schema='sc_analytics',
   cluster_by=['product_category_english']
 ) }}
 

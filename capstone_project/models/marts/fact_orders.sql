@@ -1,6 +1,7 @@
 {{ config(
     materialized = 'incremental',
-    unique_key='order_id',
+    unique_key='order_key',
+    schema='sc_analytics',
     incremental_strategy='append'  
 ) }}
 
@@ -95,7 +96,8 @@ select
     s.seller_key,
     p.order_payment_key,
     r.order_review_key,
-    dp.product_key,             -- ADDED
+    dp.product_key,     
+    dp.product_id,        -- ADDED
     dp.product_category_english,               -- ADDED
 
     -- natural ids (traceability)

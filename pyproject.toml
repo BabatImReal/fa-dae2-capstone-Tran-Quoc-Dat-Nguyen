@@ -26,6 +26,13 @@ dependencies = [
 ]
 
 [dependency-groups]
+
+pr_ci = [
+    "dbt-snowflake>=1.10.0",
+    "sqlfluff>=3.4.2",
+    "sqlfluff-templater-dbt>=3.4.2",
+]
+
 dev = [
     "pytest>=8.4.2",
     "sqlfluff>=3.4.2",

@@ -598,6 +598,11 @@ dev = [
     { name = "sqlfluff" },
     { name = "sqlfluff-templater-dbt" },
 ]
+pr-ci = [
+    { name = "dbt-snowflake" },
+    { name = "sqlfluff" },
+    { name = "sqlfluff-templater-dbt" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -624,6 +629,11 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest", specifier = ">=8.4.2" },
+    { name = "sqlfluff", specifier = ">=3.4.2" },
+    { name = "sqlfluff-templater-dbt", specifier = ">=3.4.2" },
+]
+pr-ci = [
+    { name = "dbt-snowflake", specifier = ">=1.10.0" },
     { name = "sqlfluff", specifier = ">=3.4.2" },
     { name = "sqlfluff-templater-dbt", specifier = ">=3.4.2" },
 ]

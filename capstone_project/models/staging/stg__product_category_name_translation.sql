@@ -1,4 +1,6 @@
-{{ config(materialized='view') }}
+{{ config(
+    materialized='view',
+    schema='sc_staging') }}
 
 with source as (
     select * from {{ source('sc_raw_data', 'product_category_name_translation') }}

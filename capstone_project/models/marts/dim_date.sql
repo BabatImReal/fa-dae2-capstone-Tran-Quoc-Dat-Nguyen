@@ -1,4 +1,6 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    schema='sc_analytics',) }}
 
 with date_spine as (
     select dateadd('day', seq4(), '2020-01-01'::date) as date_value
