@@ -22,11 +22,23 @@ jobs:
       SNOWFLAKE_CI_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
       SNOWFLAKE_CI_PRIVATE_KEY_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
       DBT_PROFILES_DIR: ./.dbt
-      DBT_PROJECT_DIR: ./capstone_project
+      DBT_PROJECT_DIR: .
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Verify project directory exists
+        run: |
+          echo "Listing repo root:"
+          ls -la
+          echo "Listing capstone_project (if present):"
+          if [ -d "capstone_project" ]; then
+            ls -la capstone_project
+          else
+            echo "ERROR: capstone_project directory not found at repo root."
+            exit 1
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@v4
