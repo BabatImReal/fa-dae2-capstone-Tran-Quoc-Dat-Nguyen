@@ -2,6 +2,7 @@
 target/
 dbt_packages/
 macros/
+seeds/
 
 # Non-dbt SQL files
 scripts/

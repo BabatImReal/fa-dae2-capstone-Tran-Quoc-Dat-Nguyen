@@ -12,6 +12,18 @@ jobs:
   PR_CI:
     runs-on: ubuntu-latest
 
+    env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}_${{ github.event.number }}
+          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
+          SNOWFLAKE_PRIVATE_KEY_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
+          DBT_PROFILES_DIR: ./capstone_project/.dbt
+          DBT_PROJECT_DIR: ./capstone_project
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,59 +55,15 @@ jobs:
       - name: Run dbt debug
         run: |
           uv run dbt debug -t ci
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
-          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
-          SNOWFLAKE_PRIVATE_KEY_FILE_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-          DBT_PROFILES_DIR: ${{ vars.DBT_PROFILES_DIR }}
-          DBT_PROJECT_DIR: ${{ vars.DBT_PROJECT_DIR }}
 
       - name: Run SQLFluff lint
         run: |
           uv run sqlfluff lint
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
-          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
-          SNOWFLAKE_PRIVATE_KEY_FILE_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-          DBT_PROFILES_DIR: ${{ vars.DBT_PROFILES_DIR }}
-          DBT_PROJECT_DIR: ${{ vars.DBT_PROFILES_DIR }}
 
       - name: Run dbt deps
         run: |
           uv run dbt deps -t ci
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
-          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
-          SNOWFLAKE_PRIVATE_KEY_FILE_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-          DBT_PROFILES_DIR: ${{ vars.DBT_PROFILES_DIR }}
-          DBT_PROJECT_DIR: ${{ vars.DBT_PROJECT_DIR }}
 
       - name: Run dbt tests
         run: |
           uv run dbt test -t ci
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
-          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
-          SNOWFLAKE_PRIVATE_KEY_FILE_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-          DBT_PROFILES_DIR: ${{ vars.DBT_PROFILES_DIR }}
-          DBT_PROJECT_DIR: ${{ vars.DBT_PROJECT_DIR }}
