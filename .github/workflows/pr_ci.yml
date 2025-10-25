@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}_${{ github.event.number }}
-          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
-          SNOWFLAKE_PRIVATE_KEY_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-          DBT_PROFILES_DIR: ./capstone_project/.dbt
-          DBT_PROJECT_DIR: ./capstone_project
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}_${{ github.event.number }}
+      SNOWFLAKE_CI_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
+      SNOWFLAKE_CI_PRIVATE_KEY_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
+      DBT_PROFILES_DIR: ./capstone_project/.dbt
+      DBT_PROJECT_DIR: ./capstone_project
 
     steps:
       - name: Checkout code
@@ -71,3 +71,4 @@ jobs:
         run: |
           uv run dbt test -t ci
         working-directory: ${{ env.DBT_PROJECT_DIR}}
+        
