@@ -21,8 +21,8 @@ jobs:
       SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}_${{ github.event.number }}
       SNOWFLAKE_CI_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE }}
       SNOWFLAKE_CI_PRIVATE_KEY_PWD: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_FILE_PWD }}
-      DBT_PROFILES_DIR: ./capstone_project/.dbt
-      DBT_PROJECT_DIR: ./capstone_project
+      DBT_PROFILES_DIR: ${{ github.workspace }}/capstone_project/.dbt
+      DBT_PROJECT_DIR: .
 
     steps:
       - name: Checkout code
@@ -67,20 +67,20 @@ jobs:
       - name: Run dbt debug
         run: |
           uv run dbt debug -t ci
-        working-directory: ${{ env.DBT_PROJECT_DIR }}
+        working-directory: capstone_project
 
       - name: Run SQLFluff lint
         run: |
-          uv run sqlfluff lint
-        working-directory: ${{ env.DBT_PROJECT_DIR }}
+          uv run sqlfluff lint .
+        working-directory: capstone_project
 
       - name: Run dbt deps
         run: |
           uv run dbt deps -t ci
-        working-directory: ${{ env.DBT_PROJECT_DIR }}
+        working-directory: capstone_project
 
       - name: Run dbt tests
         run: |
           uv run dbt test -t ci
-        working-directory: ${{ env.DBT_PROJECT_DIR }}
+        working-directory: capstone_project
         
