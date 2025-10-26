@@ -71,7 +71,7 @@ jobs:
 
       - name: Run SQLFluff lint
         run: |
-          uv run sqlfluff lint . --config-value "sqlfluff.templater.dbt.target=ci"
+          uv run sqlfluff lint . 
         working-directory: capstone_project
 
       - name: Run dbt deps
