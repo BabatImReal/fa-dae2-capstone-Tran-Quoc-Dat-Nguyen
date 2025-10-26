@@ -51,8 +51,8 @@ group_by_and_order_by_style = implicit
 
 # dbt templater configuration
 [sqlfluff:templater:dbt]
-project_dir = D:/Data/Foundry_AI/projects/fa-dae2-capstone-Tran-Quoc-Dat-Nguyen/capstone_project
-profiles_dir = D:/Data/Foundry_AI/projects/fa-dae2-capstone-Tran-Quoc-Dat-Nguyen/capstone_project/.dbt
+project_dir = .
+profiles_dir = ./.dbt
 profile = capstone_project
 target = dev
 dbt_skip_compilation_error = True
