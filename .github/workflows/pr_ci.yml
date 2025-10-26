@@ -69,14 +69,18 @@ jobs:
           uv run dbt deps -t ci
         working-directory: capstone_project
 
+      - name: Run SQLFluff lint
+        run: |
+          uv run sqlfluff lint .
+        working-directory: capstone_project
+
       - name: Run dbt debug
         run: |
           uv run dbt debug -t ci
         working-directory: capstone_project
 
-
-      - name: Run dbt tests
+      - name: Run dbt build
         run: |
-          uv run dbt test -t ci
+          uv run dbt build -t ci
         working-directory: capstone_project
         
