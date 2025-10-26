@@ -54,7 +54,7 @@ group_by_and_order_by_style = implicit
 project_dir = .
 profiles_dir = ./.dbt
 profile = capstone_project
-target = dev
+target = ci
 dbt_skip_compilation_error = True
 dbt_skip_connection_error = True
 
