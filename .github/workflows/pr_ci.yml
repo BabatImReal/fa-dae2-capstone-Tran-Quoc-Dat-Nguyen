@@ -39,12 +39,6 @@ jobs:
             echo "ERROR: capstone_project directory not found at repo root."
             exit 1
           fi
-      - name: Debug: show DBT_PROFILES_DIR and list it
-          run: |
-            echo "DBT_PROFILES_DIR=$DBT_PROFILES_DIR"
-            echo "Listing contents (if any):"
-            ls -la "$DBT_PROFILES_DIR" || true
-          shell: bash
 
       - name: Setup Python
         uses: actions/setup-python@v4
