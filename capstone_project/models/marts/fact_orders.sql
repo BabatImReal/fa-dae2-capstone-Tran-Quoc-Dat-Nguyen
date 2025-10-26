@@ -2,7 +2,7 @@
     materialized = 'incremental',
     unique_key='order_key',
     schema='sc_analytics',
-    incremental_strategy='upsert'
+    incremental_strategy='append'
 ) }}
 
 with orders as (
