@@ -49,8 +49,6 @@ Thumbs.db
 *.key
 
 
-# dbt profiles
-.dbt/
 
 # dbt artifacts
 target/

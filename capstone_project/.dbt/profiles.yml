@@ -1,0 +1,26 @@
+capstone_project:
+  outputs:
+    dev:
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_FILE_PWD') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_FILE_PATH') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}"
+      threads: 4
+      type: snowflake
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+    ci:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      private_key: "{{ env_var('SNOWFLAKE_CI_PRIVATE_KEY') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_CI_PRIVATE_KEY_PWD') }}"
+      threads: 4
+
+  target: ci
