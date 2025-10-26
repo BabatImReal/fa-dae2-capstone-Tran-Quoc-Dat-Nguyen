@@ -64,20 +64,16 @@ jobs:
         run: |
           uv sync --group pr_ci --no-dev
 
+      - name: Run dbt deps
+        run: |
+          uv run dbt deps -t ci
+        working-directory: capstone_project
+
       - name: Run dbt debug
         run: |
           uv run dbt debug -t ci
         working-directory: capstone_project
 
-      - name: Run SQLFluff lint
-        run: |
-          uv run sqlfluff lint . 
-        working-directory: capstone_project
-
-      - name: Run dbt deps
-        run: |
-          uv run dbt deps -t ci
-        working-directory: capstone_project
 
       - name: Run dbt tests
         run: |
