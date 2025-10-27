@@ -2,7 +2,7 @@
     materialized = 'incremental',
     unique_key='order_key',
     schema='sc_analytics',
-    incremental_strategy='append'
+    incremental_strategy='merge'
 ) }}
 
 with orders as (
@@ -128,8 +128,7 @@ left join int_order_items as ioi
 left join dim_customers as c
     on
         o.customer_id = c.customer_id
-        and o.order_purchase_timestamp
-        between c.effective_from and c.effective_to
+        and c.effective_to is null  -- Always use current customer
 
 left join dim_sellers as s
     on ioi.seller_id = s.seller_id
@@ -142,14 +141,8 @@ left join dim_product as dp
 
 {% if is_incremental() %}
     where
-        o.loaded_at > (
-            select coalesce(max(loaded_at), cast('1900-01-01' as timestamp_ntz)) from {{ this }}
-        )
-        and (
-            o.order_id not in (select order_id from {{ this }})
-            or o.customer_id not in (select customer_id from {{ this }})
-            or o.order_purchase_timestamp > (
-                select coalesce(max(order_purchase_timestamp), cast('1900-01-01' as timestamp_ntz)) from {{ this }}
-            )
+        o.order_purchase_timestamp > (
+            select coalesce(max(order_purchase_timestamp), '1900-01-01'::timestamp_ntz)
+            from {{ this }}
         )
 {% endif %}
