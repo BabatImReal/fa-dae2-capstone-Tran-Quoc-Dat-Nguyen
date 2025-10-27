@@ -25,6 +25,10 @@
 - **Data flow**: See [data-flow.md](docs/architecture/data-flow.md) for a description of how data moves from sources to databases.
 - **Technology choices**: See [technology-decision.md](docs/architecture/technology-decision.md) for justification of the tech stack decisions.
 
+### Data Modelling
+- **Star Schema Model**: See [methodology.md](docs/data-modelling/methodology.md) for detailed data modelling explanation.
+- **Entity Relationship Diagram (ERD)**: See [star-schema.png](docs/data-modelling/diagram/star-schema.png) for full ER Diagram.
+
 ## Project Setup
 
 ### Prerequisites
