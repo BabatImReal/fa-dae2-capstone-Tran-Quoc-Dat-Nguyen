@@ -32,15 +32,8 @@ joined as (
         min(i.product_id) as product_id,
         max(datediff('day', o.order_purchase_timestamp, o.order_delivered_customer_date)) as shipping_date,
         max(i.shipping_limit_date) as shipping_limit_date,
-        max(datediff('day', o.order_purchase_timestamp, i.shipping_limit_date)) as shipping_sla_days,
         count(i.order_item_id) as order_qty,
         (avg(i.price + i.freight_value) * count(i.order_item_id)) as total_order_value,
-        max(
-            case
-                when o.order_delivered_customer_date is null or i.shipping_limit_date is null then null
-                else greatest(datediff('day', i.shipping_limit_date, o.order_delivered_customer_date), 0)
-            end
-        ) as delivered_after_sla_days,
         case
             when max(o.order_estimated_delivery_date) is null or max(o.order_delivered_customer_date) is null then null
             when max(o.order_estimated_delivery_date) < max(o.order_delivered_customer_date) then 1
@@ -59,9 +52,7 @@ select
     order_status,
     shipping_date,
     shipping_limit_date,
-    shipping_sla_days,
     order_qty,
     total_order_value,
-    delivered_after_sla_days,
     order_check_flag
 from joined

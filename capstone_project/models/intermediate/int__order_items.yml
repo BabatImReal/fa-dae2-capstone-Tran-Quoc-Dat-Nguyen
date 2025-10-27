@@ -40,16 +40,6 @@ models:
       - name: shipping_limit_date
         description: "Latest promised shipping handoff (order-level max)."
 
-      - name: shipping_sla_days
-        description: "Promised SLA days from purchase to shipping_limit_date."
-        tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 36500
-              inclusive: true
-              config:
-                where: "shipping_sla_days is not null"
-
       - name: order_qty
         description: "Count of items in the order."
         tests:
@@ -67,16 +57,6 @@ models:
               min_value: 0
               max_value: 1000000000
               inclusive: true
-
-      - name: delivered_after_sla_days
-        description: "Days delivered after SLA; 0 if on time; null if dates missing."
-        tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 36500
-              inclusive: true
-              config:
-                where: "delivered_after_sla_days is not null"
 
       - name: order_check_flag
         description: "1 if estimated < actual delivered, else 0; null if either date missing."

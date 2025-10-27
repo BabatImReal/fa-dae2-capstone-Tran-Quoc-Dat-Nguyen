@@ -56,10 +56,8 @@ int_order_items as (
         order_status,
         shipping_date,
         shipping_limit_date,
-        shipping_sla_days,
         order_qty,
         total_order_value,
-        delivered_after_sla_days,
         order_check_flag
     from {{ ref('int__order_items') }}
 ),
@@ -111,11 +109,11 @@ select
     ioi.order_qty,
     ioi.total_order_value,
     ioi.shipping_date,
+    {{ calculate_shipping_performance_tier('ioi.shipping_date') }} as shipping_tier,
     ioi.shipping_limit_date,
-    ioi.shipping_sla_days,
-    ioi.delivered_after_sla_days,
     ioi.order_check_flag,
     r.review_score,
+    {{ calculate_review_score_tier('r.review_score') }} as review_tier,
 
     -- metadata
     o.loaded_at,

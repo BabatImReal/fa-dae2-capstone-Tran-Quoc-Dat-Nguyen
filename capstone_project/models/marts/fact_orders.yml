@@ -53,3 +53,30 @@ models:
               arguments:
                 to: ref('dim_products')
                 field: product_key
+
+      - name: shipping_tier
+        description: "Categorizes shipping performance based on shipping_date"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - 'Unknown'
+                - 'Excellent'
+                - 'Good'
+                - 'Average'
+                - 'Below Average'
+                - 'Poor'
+      
+      - name: review_tier
+        description: "Categorizes customer satisfaction based on review_score"
+        tests:
+          - accepted_values:
+              values:
+                - 'No Review'
+                - 'Excellent'
+                - 'Good'
+                - 'Average'
+                - 'Poor'
+                - 'Very Poor'
+                - 'Invalid'
+
