@@ -66,7 +66,7 @@ dim_product as (
     select
         product_id,
         product_key,                  -- ADDED
-        product_category_english
+        product_category_name_english
     from {{ ref('dim_products') }}
 ),
 
@@ -91,7 +91,7 @@ select
     r.order_review_key,
     dp.product_key,
     dp.product_id,        -- ADDED
-    dp.product_category_english,               -- ADDED
+    dp.product_category_name_english,               -- ADDED
 
     -- natural ids (traceability)
     o.customer_id,

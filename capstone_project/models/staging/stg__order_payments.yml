@@ -1,0 +1,69 @@
+version: 2
+
+models:
+  - name: stg__order_payments
+    description: "Staging table for order payment information from the Brazilian e-commerce dataset"
+    columns:
+      - name: order_id
+        description: "Natural key - unique identifier for each order"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg__orders')
+              field: order_id
+
+      - name: payment_sequential
+        description: "Sequential number for payments made on the same order"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+
+      - name: payment_type
+        description: "Payment method used (credit_card, boleto, voucher, debit_card, etc.)"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - 'credit_card'
+                - 'boleto'
+                - 'voucher'
+                - 'debit_card'
+                - 'not_defined'
+              config:
+                severity: warn  # Allow new payment types with warning
+
+      - name: payment_installments
+        description: "Number of installments chosen by the customer"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 24
+              inclusive: true
+              config:
+                severity: warn  # Warn if installments exceed typical range
+
+      - name: payment_value
+        description: "Total payment amount in Brazilian Reais (BRL)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: false  # Payment value must be > 0
+              config:
+                error_if: ">100"  # Error if more than 100 zero-value payments
+                warn_if: ">10"
+
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the staging table"
+        tests:
+          - not_null
+
+      - name: source_system
+        description: "Source system identifier (always 'olist' for this dataset)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['csv']

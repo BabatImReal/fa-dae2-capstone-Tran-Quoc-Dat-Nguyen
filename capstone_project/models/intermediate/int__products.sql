@@ -1,18 +1,36 @@
--- ephemeral canonical products
 {{ config(materialized='ephemeral') }}
 
-select
-    {{ dbt_utils.generate_surrogate_key(['product_id']) }} as product_key,
-    p.product_id,
-    p.product_name_length,
-    p.product_description_length,
-    p.product_photos_qty,
-    p.product_weight_g,
-    p.product_length_cm,
-    p.product_height_cm,
-    p.product_width_cm,
-    coalesce(t.product_category_name_english, p.product_category_name) as product_category_english,
-    p.loaded_at
-from {{ ref('stg__products') }} as p
-left join {{ ref('stg__product_category_name_translation') }} as t
-    on p.product_category_name = t.product_category_name
+with products as (
+    select *
+    from {{ ref('stg__products') }}
+),
+
+product_category_translation as (
+    select *
+    from {{ ref('stg__product_category_name_translation') }}
+),
+
+-- Remove only products that have ALL attributes null (completely invalid)
+cleaned_products as (
+    select
+        p.*,
+        pct.product_category_name_english
+    from products p
+    left join product_category_translation pct
+        on p.product_category_name = pct.product_category_name
+    where 
+        -- Must have product_id (primary key)
+        p.product_id is not null
+        -- Must have at least ONE valid attribute (not all NULL)
+        and p.product_category_name is not null
+        and p.product_name_length is not null
+        and p.product_description_length is not null
+        and p.product_photos_qty is not null
+        and p.product_weight_g is not null
+        and p.product_length_cm is not null
+        and p.product_height_cm is not null
+        and p.product_width_cm is not null
+        and pct.product_category_name_english is not null  -- Must have translation
+)
+
+select * from cleaned_products

@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: dim_products
+    description: "Product dimension table containing product attributes and category information"
+    columns:
+      - name: product_key
+        description: "Surrogate key for product dimension (MD5 hash of product_id)"
+        tests:
+          - unique
+          - not_null
+
+      - name: product_id
+        description: "Natural key - unique identifier for each product"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg__products')
+              field: product_id
+
+      - name: product_category_english
+        description: "Product category name translated to English"
+        # No not_null test because some products may not have category translations
+
+      - name: product_name_length
+        description: "Length of the product name in characters"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1000
+              inclusive: true
+              config:
+                severity: warn
+
+      - name: product_description_length
+        description: "Length of the product description in characters"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10000
+              inclusive: true
+              config:
+                severity: warn
+
+      - name: product_photos_qty
+        description: "Number of product photos available"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: true
+              config:
+                severity: warn
+
+      - name: product_weight_g
+        description: "Product weight in grams"
+        tests:
+          - not_null:
+              config:
+                severity: warn  # Some products may not have weight
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 50000  # 50kg max for most e-commerce products
+              inclusive: true
+              config:
+                severity: warn
+                where: "product_weight_g is not null"
+
+      - name: product_length_cm
+        description: "Product length in centimeters"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 500  # 5 meters max
+              inclusive: false
+              config:
+                severity: warn
+                where: "product_length_cm is not null"
+
+      - name: product_height_cm
+        description: "Product height in centimeters"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 500
+              inclusive: false
+              config:
+                severity: warn
+                where: "product_height_cm is not null"
+
+      - name: product_width_cm
+        description: "Product width in centimeters"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 500
+              inclusive: false
+              config:
+                severity: warn
+                where: "product_width_cm is not null"
+
+      - name: loaded_at
+        description: "Timestamp when the record was loaded"
+        tests:
+          - not_null

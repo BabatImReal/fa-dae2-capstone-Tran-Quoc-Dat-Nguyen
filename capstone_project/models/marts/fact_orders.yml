@@ -2,6 +2,33 @@ version: 2
 models:
   - name: fact_orders
     description: "Order fact at order grain."
+
+    tests:
+      # Row count validation
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 1000
+      
+      - dbt_expectations.expect_table_row_count_to_equal_other_table:
+          compare_model: ref('stg__orders')
+      
+      # Column pair comparison at table level (not under a column)
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          column_A: order_estimated_delivery_date
+          column_B: order_purchase_timestamp
+          or_equal: true
+      
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          column_A: order_delivered_customer_date
+          column_B: order_purchase_timestamp
+          or_equal: true
+          row_condition: "order_delivered_customer_date is not null"
+      
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          column_A: order_approved_at
+          column_B: order_purchase_timestamp
+          or_equal: true
+          row_condition: "order_approved_at is not null"
+
     columns:
       - name: order_id
         tests:
@@ -23,6 +50,10 @@ models:
                 - delivered
                 - canceled
                 - unavailable
+          - dbt_expectations.expect_column_most_common_value_to_be_in_set:
+              value_set: ['delivered', 'shipped']
+              top_n: 2
+
       - name: customer_key
         tests:
           - relationships:
@@ -35,6 +66,13 @@ models:
               arguments:
                 to: ref('dim_sellers')
                 field: seller_key
+      - name: total_order_value
+        description: "Total monetary value of the order in BRL"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 200000
+              strictly: false
       - name: order_payment_key
         tests:
           - relationships:
@@ -47,6 +85,12 @@ models:
               arguments:
                 to: ref('dim_order_reviews')
                 field: order_review_key
+
+      - name: order_estimated_delivery_date
+        description: "Estimated delivery date promised to customer"
+        tests:
+          - not_null
+
       - name: product_key
         tests:
           - relationships:
