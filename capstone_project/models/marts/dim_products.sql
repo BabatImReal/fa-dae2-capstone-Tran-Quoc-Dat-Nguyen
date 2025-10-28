@@ -1,7 +1,7 @@
 {{ config(
   materialized='table',
   schema='sc_analytics',
-  cluster_by=['product_category_english']
+  cluster_by=['product_category_name_english']
 ) }}
 
 with src as (
@@ -14,7 +14,7 @@ select
     {{ dbt_utils.generate_surrogate_key(['product_id', 'loaded_at']) }} as product_key,
     -- natural/business keys and attributes
     product_id,
-    product_category_english,
+    product_category_name_english,
     product_name_length,
     product_description_length,
     product_photos_qty,
