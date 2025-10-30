@@ -15,10 +15,10 @@ cleaned_products as (
     select
         p.*,
         pct.product_category_name_english
-    from products p
-    left join product_category_translation pct
+    from products as p
+    left join product_category_translation as pct
         on p.product_category_name = pct.product_category_name
-    where 
+    where
         -- Must have product_id (primary key)
         p.product_id is not null
         -- Must have at least ONE valid attribute (not all NULL)
