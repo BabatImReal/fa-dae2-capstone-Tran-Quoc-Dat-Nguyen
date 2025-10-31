@@ -53,6 +53,7 @@ dim_order_reviews as (
     from {{ ref('dim_order_reviews') }}
 ),
 
+
 int_order_items as (
     select
         order_id,
