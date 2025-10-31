@@ -28,13 +28,13 @@ int_products as (
 select
     -- surrogate key
     {{ dbt_utils.generate_surrogate_key(['sp.product_id', 'sp.loaded_at']) }} as product_key,
-    
+
     -- natural/business keys
     sp.product_id,
-    
+
     -- category from int__products (enriched with English translation)
     ip.product_category_name_english,
-    
+
     -- product attributes from stg__products
     sp.product_name_length,
     sp.product_description_length,
@@ -43,7 +43,7 @@ select
     sp.product_length_cm,
     sp.product_height_cm,
     sp.product_width_cm,
-    
+
     -- metadata
     sp.loaded_at,
     current_timestamp() as dbt_updated_at

@@ -100,7 +100,7 @@ select
     o.customer_id,
     ioi.product_id,              -- FIXED: Added from int_order_items
     ioi.seller_id,
-    
+
     -- dimension attributes (for easier querying)
     dp.product_category_name_english,  -- FIXED: Now properly joined
 
@@ -132,8 +132,9 @@ inner join int_order_items as ioi           -- CHANGED: inner join (orders must 
     on o.order_id = ioi.order_id
 
 left join dim_customers as c
-    on o.customer_id = c.customer_id
-    and c.effective_to is null              -- Current customer record only
+    on
+        o.customer_id = c.customer_id
+        and c.effective_to is null              -- Current customer record only
 
 left join dim_sellers as s
     on ioi.seller_id = s.seller_id
@@ -148,9 +149,9 @@ left join dim_product as dp                  -- FIXED: Join on correct source
     on ioi.product_id = dp.product_id
 
 {% if is_incremental() %}
-where
-    o.loaded_at > (
-        select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ntz))
-        from {{ this }}
-    )
+    where
+        o.loaded_at > (
+            select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ntz))
+            from {{ this }}
+        )
 {% endif %}
