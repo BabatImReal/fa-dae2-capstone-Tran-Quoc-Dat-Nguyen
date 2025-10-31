@@ -1,8 +1,13 @@
 {{ config(
     materialized = 'incremental',
-    unique_key='order_key',
+    unique_key=['order_id', 'product_id', 'seller_id'],
     schema='sc_analytics',
-    incremental_strategy='merge'
+    cluster_by=['order_purchase_timestamp::date'],
+    incremental_strategy='merge',
+    on_schema_change='sync_all_columns',
+    post_hook=[
+      "delete from {{ this }} where order_id not in (select order_id from {{ ref('stg__orders') }})"
+    ]
 ) }}
 
 with orders as (
@@ -14,8 +19,8 @@ dim_customers as (
     select
         customer_id,
         customer_key,
-        effective_from,   -- added
-        effective_to      -- added
+        effective_from,
+        effective_to
     from {{ ref('dim_customers') }}
 ),
 
@@ -29,7 +34,8 @@ dim_sellers as (
 dim_order_payment as (
     select
         order_id,
-        order_payment_key
+        order_payment_key,
+        primary_payment_type
     from {{ ref('dim_order_payment') }}
 ),
 
@@ -37,7 +43,7 @@ dim_order_reviews as (
     select
         order_id,
         order_review_key,
-        review_score,                                -- ADDED
+        review_score,
         review_answer_timestamp,
         review_creation_date,
         row_number() over (
@@ -50,7 +56,6 @@ dim_order_reviews as (
 int_order_items as (
     select
         order_id,
-        customer_id,
         product_id,
         seller_id,
         order_status,
@@ -65,7 +70,7 @@ int_order_items as (
 dim_product as (
     select
         product_id,
-        product_key,                  -- ADDED
+        product_key,
         product_category_name_english
     from {{ ref('dim_products') }}
 ),
@@ -80,22 +85,24 @@ first_review_record as (
 )
 
 select
-    -- natural key
-    {{ dbt_utils.generate_surrogate_key(['o.order_id', 'o.loaded_at']) }} as order_key,
+    -- natural/surrogate key
+    {{ dbt_utils.generate_surrogate_key(['o.order_id', 'ioi.product_id', 'ioi.seller_id']) }} as order_key,
     o.order_id,
 
     -- dimension surrogate keys
-    c.customer_key,
+    c.customer_key,              -- FIXED: Now properly joined
     s.seller_key,
     p.order_payment_key,
     r.order_review_key,
-    dp.product_key,
-    dp.product_id,        -- ADDED
-    dp.product_category_name_english,               -- ADDED
+    dp.product_key,              -- FIXED: Now properly joined
 
-    -- natural ids (traceability)
+    -- natural ids (for traceability)
     o.customer_id,
+    ioi.product_id,              -- FIXED: Added from int_order_items
     ioi.seller_id,
+    
+    -- dimension attributes (for easier querying)
+    dp.product_category_name_english,  -- FIXED: Now properly joined
 
     -- order attributes
     o.order_status,
@@ -106,6 +113,7 @@ select
     o.order_estimated_delivery_date,
 
     -- measures
+    p.primary_payment_type,
     ioi.order_qty,
     ioi.total_order_value,
     ioi.shipping_date,
@@ -117,30 +125,32 @@ select
 
     -- metadata
     o.loaded_at,
-    current_timestamp() as dbt_updated_at   -- ensure compiled tmp has this column for MERGE
+    current_timestamp() as dbt_updated_at
 
 from orders as o
-left join int_order_items as ioi
+inner join int_order_items as ioi           -- CHANGED: inner join (orders must have items)
     on o.order_id = ioi.order_id
 
 left join dim_customers as c
-    on
-        o.customer_id = c.customer_id
-        and c.effective_to is null  -- Always use current customer
+    on o.customer_id = c.customer_id
+    and c.effective_to is null              -- Current customer record only
 
 left join dim_sellers as s
     on ioi.seller_id = s.seller_id
+
 left join dim_order_payment as p
     on o.order_id = p.order_id
+
 left join first_review_record as r
     on o.order_id = r.order_id
-left join dim_product as dp
+
+left join dim_product as dp                  -- FIXED: Join on correct source
     on ioi.product_id = dp.product_id
 
 {% if is_incremental() %}
-    where
-        o.order_purchase_timestamp > (
-            select coalesce(max(order_purchase_timestamp), '1900-01-01'::timestamp_ntz)
-            from {{ this }}
-        )
+where
+    o.loaded_at > (
+        select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ntz))
+        from {{ this }}
+    )
 {% endif %}

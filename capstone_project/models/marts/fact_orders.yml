@@ -8,9 +8,6 @@ models:
       - dbt_expectations.expect_table_row_count_to_be_between:
           min_value: 1000
       
-      - dbt_expectations.expect_table_row_count_to_equal_other_table:
-          compare_model: ref('stg__orders')
-      
       # Column pair comparison at table level (not under a column)
       - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
           column_A: order_estimated_delivery_date
@@ -29,7 +26,18 @@ models:
           or_equal: true
           row_condition: "order_approved_at is not null"
 
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - product_id
+            - seller_id
+
     columns:
+      - name: order_key
+        tests:
+          - unique
+          - not_null
+
       - name: order_id
         tests:
           - not_null
