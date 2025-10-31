@@ -15,5 +15,5 @@ select
     customer_city,
     customer_state,
     current_timestamp() as loaded_at
-from {{ source('sc_raw_data','olist_customers') }}
+from {{ ref('stg__customers') }}
 {% endsnapshot %}
