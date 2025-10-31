@@ -39,241 +39,133 @@
 - Snowflake account (optional for full pipeline)
 
 
-### 1. Environment Setup
+## Running the Data Pipeline
 
-#### Install uv (if not already installed)
-```bash
-# On Windows:
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+### Complete Pipeline Execution (Step-by-Step)
 
-# On Linux/macOS:
-curl -LsSf https://astral.sh/uv/install.sh | sh
+Follow these steps in order to run the complete data pipeline from data collection to analytics:
 
-# Or using pip:
-pip install uv
-```
-
-#### Clone and Navigate to Project
-```bash
-git clone <repository-url>
-cd fa-dae2-capstone-Tran-Quoc-Dat-Nguyen
-```
-
-#### Install Dependencies with uv
-```bash
-# Sync all dependencies (creates virtual environment automatically)
-uv sync
-
-# Install development dependencies
-uv sync --group dev
-
-# Or install all groups
-uv sync --all-groups
-```
-
-
-### 2. Environment Variables Configuration
-
-#### Copy Environment Template
-```bash
-cp config/env_example.txt .env
-```
-
-#### Update .env File
-Edit the `.env` file with your specific configuration
-
-#### Load Environment Variables
-```bash
-# Load environment variables
-export $(cat .env | xargs)
-```
-
-
-### 3. Docker Setup
-
-#### Create Docker Network
-```bash
-# Create the required Docker network
-docker network create fa-dae2-capstone_kafka_network
-```
-
-#### Start PostgreSQL with Docker Compose
-```bash
-# Start PostgreSQL service
-docker-compose up -d postgres
-
-# Check if PostgreSQL is running
-docker-compose ps
-
-# View logs
-docker-compose logs postgres
-```
-
-#### Stop Services
-```bash
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (⚠️ This will delete all data)
-docker-compose down -v
-```
-
-
-### 4. PostgreSQL Setup
-
-#### Database Initialization
-The PostgreSQL database is automatically initialized with the schema defined in `postgres-lab/sql/init.sql` when the container starts.
-
-#### Connect to PostgreSQL
-```bash
-# Connect using psql (if installed locally)
-psql -h localhost -p 5432 -U staging_user -d staging_db
-
-# Or connect via Docker
-docker exec -it m01w02-postgres psql -U staging_user -d staging_db
-```
-
-#### Verify Database Setup
-```sql
--- List all tables
-\dt
-
--- Check table structure
-\d table_name
-
--- Exit psql
-\q
-```
-
-
-### 5. Snowflake Setup (Optional)
-
-#### Database Structure
-Create the following structure in your Snowflake account:
+#### Step 1: Clean Existing Data (Optional - Fresh Start)
 
 ```sql
--- Create database
-CREATE DATABASE IF NOT EXISTS HEALTH_PIPELINE;
+-- Truncate raw data tables
+TRUNCATE TABLE SC_RAW_DATA.OLIST_CUSTOMERS;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_GEOLOCATION;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_ORDER_ITEMS;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_ORDER_PAYMENTS;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_ORDER_REVIEWS;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_ORDERS;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_PRODUCTS;
+TRUNCATE TABLE SC_RAW_DATA.OLIST_SELLERS;
+TRUNCATE TABLE SC_RAW_DATA.PRODUCT_CATEGORY_NAME_TRANSLATION;
 
--- Create schemas
-CREATE SCHEMA IF NOT EXISTS HEALTH_PIPELINE.RAW_DATA;
-CREATE SCHEMA IF NOT EXISTS HEALTH_PIPELINE.STAGING;
-CREATE SCHEMA IF NOT EXISTS HEALTH_PIPELINE.ANALYTICS;
+-- Truncate analytics tables
+TRUNCATE TABLE SC_ANALYTICS.DIM_CUSTOMERS;
+TRUNCATE TABLE SC_ANALYTICS.DIM_DATE;
+TRUNCATE TABLE SC_ANALYTICS.DIM_ORDER_PAYMENT;
+TRUNCATE TABLE SC_ANALYTICS.DIM_ORDER_REVIEWS;
+TRUNCATE TABLE SC_ANALYTICS.DIM_PRODUCTS;
+TRUNCATE TABLE SC_ANALYTICS.DIM_SELLERS;
+TRUNCATE TABLE SC_ANALYTICS.FACT_ORDERS;
 
--- Grant permissions (adjust role as needed)
-GRANT USAGE ON DATABASE HEALTH_PIPELINE TO ROLE your_role;
-GRANT USAGE ON ALL SCHEMAS IN DATABASE HEALTH_PIPELINE TO ROLE your_role;
-GRANT CREATE TABLE ON ALL SCHEMAS IN DATABASE HEALTH_PIPELINE TO ROLE your_role;
+-- Remove stage files (if needed)
+REMOVE @SC_RAW_DATA.CSV_STAGE;
 ```
 
+#### Step 2: Collect Batch Data from Kaggle
 
-#### Authentication Setup
-
-**Option 1: Username/Password**
-- Use the `SNOWFLAKE_USER` and `SNOWFLAKE_PASSWORD` variables in your `.env` file
-
-**Option 2: Private Key (Recommended)**
-1. Generate a private key pair:
-  ```bash
-  # Generate private key
-  openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
-   
-  # Generate public key
-  openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
-  ```
-
-2. Add the public key to your Snowflake user:
-  ```sql
-  ALTER USER your_username SET RSA_PUBLIC_KEY='your_public_key_content';
-  ```
-
-3. Update your `.env` file with the private key path and passphrase
-
-
-### 6. Testing the Setup
-
-#### Test Database Connections
 ```bash
-# Test PostgreSQL and Snowflake connections
-uv run python tests/test_connection.py
-```
-
-#### Test Data Pipeline
-```bash
-# Run ingestion tests
-uv run python tests/test_ingestion.py
-
-# Run full pipeline test
-uv run python tests/test_data_pipeline.py
-```
-
-#### Run All Tests
-```bash
-# Run all tests with pytest
-uv run pytest tests/
-
-# Run with verbose output
-uv run pytest tests/ -v
-```
-
-
-### 7. Running the Pipeline
-
-#### Collect and Ingest Data
-```bash
-# Collect batch data (heart disease)
+# Download Brazilian E-Commerce dataset from Kaggle
 uv run python scripts/ingestion/collect_batch_data.py
+```
 
-# Generate fake hospital transaction streaming data
+**Expected output:** CSV files downloaded to `data/batch/` directory
+
+#### Step 3: Generate Fake Streaming Data
+
+```bash
+# Generate fake hospital/transaction data (JSON files)
 uv run python scripts/ingestion/collect_fake_data.py
+```
 
-# Ingest to PostgreSQL
-uv run python scripts/ingestion/ingest_to_postgre.py
+**Expected output:** JSON files created in `data/streaming/` directory
 
-# Ingest to Snowflake (if configured)
+#### Step 4: Ingest Batch Data to Snowflake
+
+```bash
+# Load CSV batch files to Snowflake raw tables
 uv run python scripts/ingestion/ingest_to_snowflake.py
+```
 
-# Transfer from PostgreSQL to Snowflake
+**Expected output:** Data loaded into `SC_RAW_DATA.*` tables
+
+#### Step 5: Start PostgreSQL (Docker)
+
+```bash
+# Start PostgreSQL container for streaming data
+docker-compose up -d
+```
+
+**Verify:** `docker-compose ps` should show PostgreSQL running
+
+#### Step 6: Ingest Streaming Data to PostgreSQL
+
+```bash
+# Load JSON streaming data to PostgreSQL
+uv run python scripts/ingestion/ingest_to_postgres.py
+```
+
+**Expected output:** Data loaded into PostgreSQL staging tables
+
+#### Step 7: Transfer PostgreSQL Data to Snowflake
+
+```bash
+# Transfer streaming data from PostgreSQL to Snowflake
 uv run python scripts/ingestion/ingest_postgre_to_snowflake.py
 ```
 
-#### Run Main Pipeline
+**Expected output:** PostgreSQL data replicated to Snowflake
+
+#### Step 8: Set Environment Variables for dbt
+
 ```bash
-uv run python main.py
+# Load environment variables (Linux/macOS)
+set -a
+source .env
+set +a
+
+# Or for Windows PowerShell:
+# Get-Content .env | ForEach-Object {
+#     if ($_ -match '^\s*([^#][^=]+)\s*=\s*(.+)\s*$') {
+#         [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process')
+#     }
+# }
 ```
 
+#### Step 9: Run dbt Transformations
 
-### 8. Troubleshooting
+```bash
+# Navigate to dbt project directory
+cd capstone_project
 
-#### Common Issues
+# Build all models (staging → dimensions → facts)
+uv run dbt build
 
-**Docker Issues:**
-- Ensure Docker Desktop is running
-- Check if port 5432 is already in use: `netstat -an | grep 5432`
-- Reset Docker network: `docker network rm fa-dae2-capstone_kafka_network && docker network create fa-dae2-capstone_kafka_network`
+# Or run specific steps:
+# uv run dbt run --select tag:staging     # Run staging models only
+# uv run dbt run --select tag:dimension   # Run dimension models only
+# uv run dbt run --select fact_orders     # Run fact table only
+# uv run dbt test                          # Run all tests
+```
 
-**PostgreSQL Connection Issues:**
-- Verify environment variables are loaded: `echo $POSTGRES_USER`
-- Check container logs: `docker-compose logs postgres`
-- Ensure database is healthy: `docker-compose ps`
+**Expected output:**
+- ✅ Staging models created in `SC_STAGING`
+- ✅ Dimension tables created in `SC_ANALYTICS`
+- ✅ Fact tables created in `SC_ANALYTICS`
+- ✅ All tests passed (or warnings for known data quality issues)
 
-**Snowflake Connection Issues:**
-- Verify account identifier format (should include region)
-- Check private key format and permissions
-- Ensure role has necessary privileges
-- Test connection with Snowflake's web interface first
+---
 
-**Python Environment Issues:**
-- Verify uv installation: `uv --version`
-- Check Python version: `uv python list`
-- Reinstall dependencies: `uv sync --reinstall`
-- Use uv to run commands: `uv run python script.py`
-
-#### Getting Help
-- Check application logs in the console output
-- Review Docker logs: `docker-compose logs`
-- Verify environment variables: `cat .env`
-- Test individual components using the test scripts
 
 
 ### Implementation Milestones
