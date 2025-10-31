@@ -3,7 +3,7 @@
     unique_key=['order_id', 'product_id', 'seller_id'],
     schema='sc_analytics',
     cluster_by=['order_purchase_timestamp::date'],
-    incremental_strategy='merge',
+    incremental_strategy='append',
     on_schema_change='sync_all_columns',
     post_hook=[
       "delete from {{ this }} where order_id not in (select order_id from {{ ref('stg__orders') }})"
