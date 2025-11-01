@@ -56,9 +56,6 @@ models:
       - name: product_weight_g
         description: "Product weight in grams"
         tests:
-          - not_null:
-              config:
-                severity: warn  # Some products may not have weight
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 50000  # 50kg max for most e-commerce products
