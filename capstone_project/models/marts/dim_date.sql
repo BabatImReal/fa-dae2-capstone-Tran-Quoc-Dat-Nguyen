@@ -21,7 +21,7 @@ date_attributes as (
         case
             when month(date_value) in (1, 2, 3) then 'Q1'
             when month(date_value) in (4, 5, 6) then 'Q2'
-            when month(date_value) in (7, 8, 9) then 'Q3'
+            when month(date_value) in (7, 8, 9) then 'Q4'
             else 'Q4'
         end as fiscal_quarter,
         -- Business logic
