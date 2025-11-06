@@ -1,0 +1,22 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen
+
+# Copy application code
+COPY kafka/kafka_consumer.py ./kafka/
+COPY scripts/ingestion/ ./scripts/ingestion/
+COPY config/ ./config/
+COPY config.yaml ./
+
+# Use internal network for Docker Compose
+ENV KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+ENV POSTGRES_HOST=postgres
+
+CMD ["uv", "run", "python", "kafka/kafka_consumer.py"]
