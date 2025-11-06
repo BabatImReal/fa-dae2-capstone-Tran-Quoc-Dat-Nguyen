@@ -47,13 +47,73 @@ def get_connection():
     return psycopg.connect(**params)
 
 
-# Insert a list of user event records into the staging.user_events table
-def insert_user_events(records):
+def create_table_if_not_exists():
     """
-    Insert a list of user event dicts into staging.user_events.
+    Create the schema and user_events table if they don't exist.
     Returns True if successful, False otherwise.
     """
-    if not records:
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Create schema if not exists
+                cur.execute(f"CREATE SCHEMA IF NOT EXISTS {POSTGRES_SCHEMA}")
+                
+                # Create table with all necessary columns
+                create_table_query = f"""
+                CREATE TABLE IF NOT EXISTS {POSTGRES_SCHEMA}.{POSTGRES_TABLE} (
+                    event_id VARCHAR(255) PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    session_id VARCHAR(255) NOT NULL,
+                    event_type VARCHAR(100) NOT NULL,
+                    event_timestamp TIMESTAMP NOT NULL,
+                    user_agent TEXT,
+                    ip_address VARCHAR(45),
+                    page_url TEXT,
+                    page_title TEXT,
+                    referrer TEXT,
+                    product_id VARCHAR(255),
+                    product_name TEXT,
+                    category VARCHAR(100),
+                    price NUMERIC(10, 2),
+                    quantity INTEGER,
+                    search_query TEXT,
+                    results_count INTEGER,
+                    filters_applied BOOLEAN,
+                    checkout_step VARCHAR(100),
+                    cart_value NUMERIC(10, 2),
+                    item_count INTEGER,
+                    ingested_at TIMESTAMP NOT NULL
+                )
+                """
+                cur.execute(create_table_query)
+                
+                # Create indexes for better query performance
+                cur.execute(f"""
+                    CREATE INDEX IF NOT EXISTS idx_user_id 
+                    ON {POSTGRES_SCHEMA}.{POSTGRES_TABLE}(user_id)
+                """)
+                cur.execute(f"""
+                    CREATE INDEX IF NOT EXISTS idx_event_timestamp 
+                    ON {POSTGRES_SCHEMA}.{POSTGRES_TABLE}(event_timestamp)
+                """)
+                cur.execute(f"""
+                    CREATE INDEX IF NOT EXISTS idx_event_type 
+                    ON {POSTGRES_SCHEMA}.{POSTGRES_TABLE}(event_type)
+                """)
+            conn.commit()
+        logger.info(f"✅ Table {POSTGRES_SCHEMA}.{POSTGRES_TABLE} is ready")
+        return True
+    except Exception as e:
+        logger.error(f"Error creating table: {e}")
+        return False
+
+
+def insert_single_user_event(record):
+    """
+    Insert a single user event dict into staging.user_events.
+    Returns True if successful, False otherwise.
+    """
+    if not record:
         return False
 
     columns = USER_EVENT_COLS
@@ -72,76 +132,11 @@ def insert_user_events(records):
                         VALUES ({placeholders})
                         ON CONFLICT (event_id) DO NOTHING
                         """
-                for record in records:
-                    values = tuple(record.get(col) for col in columns)
-                    cur.execute(query, values)
+                values = tuple(record.get(col) for col in columns)
+                cur.execute(query, values)
             conn.commit()
         return True
     except Exception as e:
-        logger.error(f"Error inserting user events: {e}")
+        logger.error(f"Error inserting user event: {e}")
         return False
 
-
-# Main function to load and insert user events into PostgreSQL
-def main():
-    """Main function to load and insert user events into PostgreSQL."""
-    logger.info("💾 PostgreSQL Data Ingestion")
-    logger.info("=" * 40)
-
-    # Find and load the latest user events file
-    logger.info("📁 Loading user events data...")
-    data_dir = Path(config['paths']['data_dir'])
-
-    if not data_dir.exists():
-        logger.error(f"Data directory not found: {data_dir}")
-        return False
-
-    # Look for the latest user events file
-    json_files = sorted(data_dir.glob("user_event_*.json"), reverse=True)
-    if not json_files:
-        logger.error(f"No user event files found in: {data_dir}")
-        logger.info("📝 Please run the fake data generator first:")
-        logger.info("   python scripts/ingestion/generate_user_events.py")
-        return False
-
-    data_path = json_files[0]  # Use the latest file
-    logger.info(f"📄 Using data file: {data_path}")
-
-    # Load and validate JSON data
-    try:
-        with open(data_path, "r", encoding="utf-8") as f:
-            user_events = json.load(f)
-
-        if not user_events:
-            logger.error("No data found in the file")
-            return False
-
-        logger.info(f"📊 Loaded {len(user_events)} user event records")
-
-    except Exception as e:
-        logger.error(f"Error loading data file: {e}")
-        return False
-
-    # Add ingested_at timestamp to each record
-    from datetime import datetime
-    ingested_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    for record in user_events:
-        record["ingested_at"] = ingested_at
-
-    # Insert data into PostgreSQL
-    logger.info("💾 Inserting data into PostgreSQL...")
-    if insert_user_events(user_events):
-        logger.info(
-            f"✅ Successfully inserted {len(user_events)} records into "
-            f"{POSTGRES_SCHEMA}.{POSTGRES_TABLE}"
-        )
-        logger.info("✅ Data ingestion completed successfully!")
-        return True
-    else:
-        logger.error("❌ Failed to insert user events")
-        return False
-
-
-if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
