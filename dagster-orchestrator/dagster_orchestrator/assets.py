@@ -20,7 +20,7 @@ from dagster import (
     MetadataValue,
     asset,
 )
-from dagster_dbt import DbtCliResource, dbt_assets
+from dagster_dbt import DbtCliResource, dbt_assets, DagsterDbtTranslator
 from dlt.sources.sql_database import sql_table
 
 from dagster_orchestrator.resources import (
@@ -28,6 +28,18 @@ from dagster_orchestrator.resources import (
     PostgresResource,
     SnowflakeResource,
 )
+
+
+# ============================================================
+# DBT TRANSLATOR - Customize dbt asset properties
+# ============================================================
+
+class CustomDbtTranslator(DagsterDbtTranslator):
+    """Custom translator to set group name for all dbt assets."""
+    
+    def get_group_name(self, dbt_resource_props):
+        """Assign all dbt assets to the dbt_transformation group."""
+        return "dbt_transformation"
 
 
 # ============================================================
@@ -243,7 +255,7 @@ def snowflake_streaming_data(
 
 @dbt_assets(
     manifest=project_root / "capstone_project" / "target" / "manifest.json",
-    project_dir=project_root / "capstone_project",
+    dagster_dbt_translator=CustomDbtTranslator(),
 )
 def dbt_analytics_models(context: AssetExecutionContext, dbt: DbtCliResource):
     """
