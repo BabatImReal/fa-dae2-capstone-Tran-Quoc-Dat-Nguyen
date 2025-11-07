@@ -40,6 +40,8 @@ class SnowflakeResource(ConfigurableResource):
     
     def get_connection(self) -> snowflake.connector.SnowflakeConnection:
         """Get a Snowflake connection."""
+        from pathlib import Path
+        
         kwargs = {
             "account": self.account,
             "user": self.user,
@@ -51,8 +53,20 @@ class SnowflakeResource(ConfigurableResource):
         }
         
         if self.authenticator.upper() == "SNOWFLAKE_JWT":
+            # Resolve private key file path
+            private_key_path = self.private_key_file
+            if private_key_path:
+                key_path = Path(private_key_path)
+                if not key_path.is_absolute():
+                    # Assume relative to project root (3 levels up from this file)
+                    project_root = Path(__file__).resolve().parents[3]
+                    key_path = project_root / private_key_path
+                
+                # Convert to string with proper path separators
+                private_key_path = str(key_path.resolve())
+            
             kwargs.update({
-                "private_key_file": self.private_key_file,
+                "private_key_file": private_key_path,
                 "private_key_file_pwd": self.private_key_pwd,
             })
         
@@ -71,27 +85,26 @@ class SnowflakeResource(ConfigurableResource):
         # Add private key authentication
         # dlt requires the private key content as a string
         if self.private_key_file:
-            # Resolve path if relative
-            key_path = self.private_key_file
-            if not os.path.isabs(key_path):
-                # Assume relative to project root (2 levels up from this file)
-                # dagster_orchestrator/resources/snowflake.py -> [0]=resources, [1]=dagster_orchestrator, [2]=project root
-                from pathlib import Path
-                project_root = Path(__file__).resolve().parents[2]
-                # Use forward slashes for Path
-                key_path = project_root / key_path
+            from pathlib import Path
             
-            # Convert Path to string only when checking if file exists
-            key_path_str = str(key_path)
-            if os.path.exists(key_path_str):
-                with open(key_path_str, 'rb') as f:
+            # Resolve path if relative
+            key_path = Path(self.private_key_file)
+            if not key_path.is_absolute():
+                # Assume relative to project root (3 levels up from this file)
+                project_root = Path(__file__).resolve().parents[3]
+                key_path = project_root / self.private_key_file
+            
+            key_path = key_path.resolve()
+            
+            if key_path.exists():
+                with open(key_path, 'rb') as f:
                     private_key_bytes = f.read()
                 # dlt expects private key as string
                 credentials["private_key"] = private_key_bytes.decode('utf-8')
                 if self.private_key_pwd:
                     credentials["private_key_passphrase"] = self.private_key_pwd
             else:
-                raise FileNotFoundError(f"Private key file not found: {key_path_str}")
+                raise FileNotFoundError(f"Private key file not found: {key_path}")
         
         return credentials
     

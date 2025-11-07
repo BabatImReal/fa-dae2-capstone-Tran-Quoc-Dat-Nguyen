@@ -19,8 +19,8 @@ class ConfigResource(ConfigurableResource):
     
     def get_config(self) -> Dict[str, Any]:
         """Load and return configuration from YAML file."""
-        # Find project root (2 levels up: resources -> dagster_orchestrator -> dagster-orchestrator is [1], project root is [2])
-        project_root = Path(__file__).resolve().parents[2]
+        # Find project root (3 levels up: resources -> dagster_orchestrator -> dagster-orchestrator -> project root)
+        project_root = Path(__file__).resolve().parents[3]
         cfg_path = project_root / self.config_path
         
         if not cfg_path.exists():

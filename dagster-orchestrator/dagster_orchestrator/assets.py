@@ -241,13 +241,17 @@ def snowflake_streaming_data(
 # DBT TRANSFORMATION ASSETS
 # ============================================================
 
-# Note: You'll need to configure this with your dbt project path
-# Uncomment when dbt is ready to be orchestrated
-
-# @dbt_assets(
-#     manifest=project_root / "capstone_project" / "target" / "manifest.json",
-#     project_dir=project_root / "capstone_project",
-# )
-# def dbt_analytics_models(context: AssetExecutionContext, dbt: DbtCliResource):
-#     """All dbt models: staging, dimensions, and facts."""
-#     yield from dbt.cli(["build"], context=context).stream()
+@dbt_assets(
+    manifest=project_root / "capstone_project" / "target" / "manifest.json",
+    project_dir=project_root / "capstone_project",
+)
+def dbt_analytics_models(context: AssetExecutionContext, dbt: DbtCliResource):
+    """
+    All dbt models: staging, intermediate, and marts.
+    
+    Dependencies:
+    - Staging models depend on raw Snowflake tables
+    - Intermediate models process staged data
+    - Mart models create final dimensional/fact tables
+    """
+    yield from dbt.cli(["build"], context=context).stream()

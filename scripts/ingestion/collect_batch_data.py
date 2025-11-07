@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 def load_config():
-    with open("config.yaml", 'r') as file:
+    # Get project root (this file is at scripts/ingestion/collect_batch_data.py)
+    project_root = Path(__file__).resolve().parents[2]
+    config_path = project_root / "config.yaml"
+    with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
 

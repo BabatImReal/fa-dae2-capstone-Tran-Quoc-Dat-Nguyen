@@ -25,7 +25,11 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------
 def load_config():
     """Load configuration from YAML file."""
-    with open("config.yaml", 'r') as file:
+    # Get project root (this file is at scripts/ingestion/ingest_postgre_to_snowflake.py)
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parents[2]
+    config_path = project_root / "config.yaml"
+    with open(config_path, 'r') as file:
         return yaml.safe_load(file)
 
 config = load_config()
