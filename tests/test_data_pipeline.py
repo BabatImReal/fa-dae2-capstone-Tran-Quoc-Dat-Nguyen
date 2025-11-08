@@ -1,6 +1,6 @@
 # tests/test_data_pipeline.py
-import json
 import csv
+import json
 from pathlib import Path
 
 
@@ -24,7 +24,7 @@ def test_json_format():
     json_files = list(data_dir.glob("*.json"))
 
     for json_file in json_files:
-        with open(json_file, "r") as f:
+        with open(json_file) as f:
             data = json.load(f)
             assert isinstance(data, list), f"{json_file} should contain a list"
             assert len(data) > 0, f"{json_file} should not be empty"
@@ -36,7 +36,7 @@ def test_csv_format():
     csv_files = list(data_dir.glob("*.csv"))
 
     for csv_file in csv_files:
-        with open(csv_file, "r") as f:
+        with open(csv_file) as f:
             reader = csv.DictReader(f)
             rows = list(reader)
             assert len(rows) > 0, f"{csv_file} should not be empty"

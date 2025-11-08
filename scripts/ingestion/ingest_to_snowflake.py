@@ -1,41 +1,44 @@
 # Standard library imports
 import logging
 import os
-import re
 from pathlib import Path
+import re
+
+from dotenv import load_dotenv
 
 # Third-party imports
 import snowflake.connector
 import yaml
-from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 # Load configuration from YAML
 def load_config():
     """Load configuration from YAML file (project root)."""
     here = Path(__file__).resolve().parents[2]
     cfg_path = here / "config.yaml"
-    with open(cfg_path, 'r') as file:
+    with open(cfg_path) as file:
         return yaml.safe_load(file)
+
 
 config = load_config()
 
 # Use configuration values
-STAGE_FQN = config['snowflake']['stage_fqn']
-DEFAULT_TABLE_FQN = config['snowflake'].get('table_fqn')
+STAGE_FQN = config["snowflake"]["stage_fqn"]
+DEFAULT_TABLE_FQN = config["snowflake"].get("table_fqn")
 
 
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$', identifier):
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$", identifier):
         raise ValueError(f"Invalid SQL identifier: {identifier}")
     return identifier
+
 
 def sanitize_file_path(file_path, base_dir=None):
     """Sanitize file paths to prevent path traversal."""
@@ -43,32 +46,33 @@ def sanitize_file_path(file_path, base_dir=None):
     if base_dir:
         base_path = Path(base_dir).resolve()
         target_path = Path(file_path).resolve()
-        
+
         # Ensure the target path is within the base directory
         if not str(target_path).startswith(str(base_path)):
             raise ValueError(f"Invalid file path: {file_path}")
-        
+
         return str(target_path)
-    
+
     # For absolute paths, just normalize and check for dangerous patterns
     normalized = os.path.normpath(file_path)
     if ".." in normalized:
         raise ValueError(f"Invalid file path: {file_path}")
     return normalized
 
+
 # Get a Snowflake database connection using environment variables
 def get_conn():
     load_dotenv()
     auth = os.getenv("SNOWFLAKE_AUTHENTICATOR", "SNOWFLAKE_JWT")
-    kwargs = dict(
-        account=os.getenv("SNOWFLAKE_ACCOUNT"),
-        user=os.getenv("SNOWFLAKE_USER"),
-        authenticator=auth,
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        database=os.getenv("SNOWFLAKE_DATABASE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA"),
-        role=os.getenv("SNOWFLAKE_ROLE"),
-    )
+    kwargs = {
+        "account": os.getenv("SNOWFLAKE_ACCOUNT"),
+        "user": os.getenv("SNOWFLAKE_USER"),
+        "authenticator": auth,
+        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+        "database": os.getenv("SNOWFLAKE_DATABASE"),
+        "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+        "role": os.getenv("SNOWFLAKE_ROLE"),
+    }
     if auth.upper() == "SNOWFLAKE_JWT":
         kwargs.update(
             private_key_file=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH"),
@@ -99,7 +103,9 @@ def upload_csv_to_stage(csv_file_path: str, stage_fqn: str, overwrite=True) -> b
 
     stage = sanitize_identifier(stage_fqn)
 
-    put_sql = f"PUT file://{abs_path} @{stage}" + (" OVERWRITE=TRUE" if overwrite else "")
+    put_sql = f"PUT file://{abs_path} @{stage}" + (
+        " OVERWRITE=TRUE" if overwrite else ""
+    )
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(put_sql)
         # fetch results if any
@@ -133,23 +139,27 @@ def create_table_if_not_exists(table_fqn: str, cols: list):
         logger.info(f"✅ Ensured table exists: {table}")
 
 
-def load_csv_file_from_stage_to_table(table_fqn: str, stage_fqn: str, file_pattern: str, cols: list):
+def load_csv_file_from_stage_to_table(
+    table_fqn: str, stage_fqn: str, file_pattern: str, cols: list
+):
     """COPY files matching pattern from stage into table using explicit column list.
 
     cols: list of original CSV column names (will be sanitized to SQL identifiers)
     """
     table = sanitize_identifier(table_fqn)
     stage = sanitize_identifier(stage_fqn)
-    
+
     # Validate file pattern to prevent SQL injection - only allow safe characters
-    if not re.match(r'^[a-zA-Z0-9._\-*?/\\]+$', file_pattern):
+    if not re.match(r"^[a-zA-Z0-9._\-*?/\\]+$", file_pattern):
         raise ValueError(f"Invalid file pattern: {file_pattern}")
 
     # Build target column list (sanitized) and append LOADED_AT/SOURCE_SYSTEM
-    target_cols = ", ".join([_sanitize_col(c) for c in cols] + ["LOADED_AT", "SOURCE_SYSTEM"])
+    target_cols = ", ".join(
+        [_sanitize_col(c) for c in cols] + ["LOADED_AT", "SOURCE_SYSTEM"]
+    )
 
     # For the SELECT in COPY, we need to specify the source columns plus default values
-    source_cols = ", ".join([f"${i+1}" for i in range(len(cols))])
+    source_cols = ", ".join([f"${i + 1}" for i in range(len(cols))])
     copy_sql = f"""
     COPY INTO {table} ({target_cols})
     FROM (
@@ -183,10 +193,11 @@ def load_csv_file_from_stage_to_table(table_fqn: str, stage_fqn: str, file_patte
 
 # Main function to upload and load CSV data into Snowflake
 
+
 def main():
     # Determine local dataset directory (prefer dlt_input_dir if present)
     project_root = Path(__file__).resolve().parents[2]
-    dlt_dir = config['paths'].get('dlt_input_dir') or config['paths'].get('data_dir')
+    dlt_dir = config["paths"].get("dlt_input_dir") or config["paths"].get("data_dir")
     local_data_dir = project_root / dlt_dir
 
     if not local_data_dir.exists():
@@ -194,15 +205,21 @@ def main():
         return
 
     # Derive a table namespace prefix from the stage/table config
-    stage_prefix = STAGE_FQN.split('.')[0] if '.' in STAGE_FQN else STAGE_FQN
+    stage_prefix = STAGE_FQN.split(".")[0] if "." in STAGE_FQN else STAGE_FQN
 
     # For each dataset configured in config['columns'], find the matching CSV and load it
-    for dataset_name, cols in config.get('columns', {}).items():
+    for dataset_name, cols in config.get("columns", {}).items():
         # Build expected filename patterns (files in the dataset folder)
         # e.g., key 'olist_orders' -> 'olist_orders_dataset.csv' or starting with key
-        candidates = [p for p in os.listdir(local_data_dir) if p.lower().startswith(dataset_name.lower()) and p.lower().endswith('.csv')]
+        candidates = [
+            p
+            for p in os.listdir(local_data_dir)
+            if p.lower().startswith(dataset_name.lower()) and p.lower().endswith(".csv")
+        ]
         if not candidates:
-            logger.warning(f"No file found for dataset '{dataset_name}' in {local_data_dir}")
+            logger.warning(
+                f"No file found for dataset '{dataset_name}' in {local_data_dir}"
+            )
             continue
         # Pick the first matching file
         filename = candidates[0]

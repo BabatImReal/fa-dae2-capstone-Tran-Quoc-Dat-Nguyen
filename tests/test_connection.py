@@ -7,8 +7,9 @@ Tests connectivity to all database systems used in the project:
 """
 
 import os
-import sys
 from pathlib import Path
+import sys
+
 from dotenv import load_dotenv
 
 # Add the project root to the path
@@ -62,7 +63,7 @@ def test_postgresql_connection():
 
                 # Test music_transactions table
                 cur.execute("""
-                    SELECT table_name FROM information_schema.tables 
+                    SELECT table_name FROM information_schema.tables
                     WHERE table_schema = 'staging' AND table_name = 'music_transactions';
                 """)
                 table_exists = cur.fetchone()

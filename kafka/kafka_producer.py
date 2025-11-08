@@ -1,9 +1,8 @@
 import json
 import os
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
-from datetime import datetime
 
 from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
@@ -13,14 +12,14 @@ import yaml
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.ingestion.collect_fake_data import FakeDataGenerator
-from config.models import UserEventMessage
 import logging
+
+from config.models import UserEventMessage
+from scripts.ingestion.collect_fake_data import FakeDataGenerator
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ logger = logging.getLogger(__name__)
 def load_config():
     """Load configuration from YAML file."""
     config_path = Path(__file__).parent.parent / "config.yaml"
-    with open(config_path, 'r') as file:
+    with open(config_path) as file:
         return yaml.safe_load(file)
 
 
@@ -77,9 +76,6 @@ def create_kafka_topic(bootstrap_servers: str, topic_name: str) -> bool:
 def main() -> None:
     load_dotenv()
 
-    # Load configuration
-    config = load_config()
-    
     # Initialize fake data generator
     generator = FakeDataGenerator()
 
@@ -111,7 +107,7 @@ def main() -> None:
         while True:
             # Generate single user event
             event_data = generator.generate_single_user_event()
-            
+
             # Validate with Pydantic model
             event = UserEventMessage(**event_data)
 

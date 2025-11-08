@@ -1,8 +1,8 @@
 from datetime import datetime
 import json
 import os
-import sys
 from pathlib import Path
+import sys
 
 from confluent_kafka import Consumer
 from dotenv import load_dotenv
@@ -11,17 +11,17 @@ import yaml
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import logging
+
+from config.models import UserEventMessage
 from scripts.ingestion.ingest_to_postgre import (
     create_table_if_not_exists,
     insert_single_user_event,
 )
-from config.models import UserEventMessage, UserEventData
-import logging
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def load_config():
     """Load configuration from YAML file."""
     config_path = Path(__file__).parent.parent / "config.yaml"
-    with open(config_path, 'r') as file:
+    with open(config_path) as file:
         return yaml.safe_load(file)
 
 
