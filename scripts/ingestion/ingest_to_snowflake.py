@@ -140,6 +140,10 @@ def load_csv_file_from_stage_to_table(table_fqn: str, stage_fqn: str, file_patte
     """
     table = sanitize_identifier(table_fqn)
     stage = sanitize_identifier(stage_fqn)
+    
+    # Validate file pattern to prevent SQL injection - only allow safe characters
+    if not re.match(r'^[a-zA-Z0-9._\-*?/\\]+$', file_pattern):
+        raise ValueError(f"Invalid file pattern: {file_pattern}")
 
     # Build target column list (sanitized) and append LOADED_AT/SOURCE_SYSTEM
     target_cols = ", ".join([_sanitize_col(c) for c in cols] + ["LOADED_AT", "SOURCE_SYSTEM"])

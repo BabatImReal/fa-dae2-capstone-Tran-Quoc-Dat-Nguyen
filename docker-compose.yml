@@ -126,6 +126,6 @@ volumes:
     driver: local
 
 networks:
-  network:
-    external: true
+  default:
     name: fa-dae2-capstone_kafka_network
+    external: true
