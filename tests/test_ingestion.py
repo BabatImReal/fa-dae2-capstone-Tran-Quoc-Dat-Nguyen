@@ -4,11 +4,12 @@ Connection Integration Test
 Tests that all data pipeline connections and operations work end-to-end.
 """
 
-import os
-import sys
-import json
-from pathlib import Path
 from datetime import datetime
+import json
+import os
+from pathlib import Path
+import sys
+
 from dotenv import load_dotenv
 
 # Add the project root to the path
@@ -90,11 +91,11 @@ def test_postgresql_ingestion():
     print("-" * 40)
 
     try:
+        from scripts.ingestion.collect_fake_data import FakeDataGenerator
         from scripts.ingestion.ingest_to_postgre import (
             get_connection,
             insert_music_transactions,
         )
-        from scripts.ingestion.collect_fake_data import FakeDataGenerator
 
         # Generate test data
         generator = FakeDataGenerator()
@@ -106,11 +107,10 @@ def test_postgresql_ingestion():
 
         # Test database connection
         try:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT COUNT(*) FROM staging.music_transactions;")
-                    initial_count = cur.fetchone()[0]
-                    print(f"📈 Initial record count: {initial_count}")
+            with get_connection() as conn, conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM staging.music_transactions;")
+                initial_count = cur.fetchone()[0]
+                print(f"📈 Initial record count: {initial_count}")
         except Exception as e:
             print(f"❌ Database connection failed: {e}")
             return False
@@ -123,10 +123,9 @@ def test_postgresql_ingestion():
             return False
 
         # Verify insertion
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM staging.music_transactions;")
-                final_count = cur.fetchone()[0]
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM staging.music_transactions;")
+            final_count = cur.fetchone()[0]
 
         records_added = final_count - initial_count
         print("✅ Successfully inserted data")
@@ -200,9 +199,8 @@ def test_snowflake_ingestion():
             if records_added >= 0:
                 print("✅ Snowflake ingestion test passed")
                 return True
-            else:
-                print("❌ Unexpected record count change")
-                return False
+            print("❌ Unexpected record count change")
+            return False
 
         except Exception as e:
             print(f"❌ Final count verification failed: {e}")

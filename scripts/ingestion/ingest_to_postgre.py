@@ -1,34 +1,33 @@
 # Standard library imports
-import json
 import logging
 import os
-import sys
-from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Third-party imports
 import psycopg
 import yaml
-from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 # Load configuration from YAML
 def load_config():
     """Load configuration from YAML file."""
-    with open("config.yaml", 'r') as file:
+    with open("config.yaml") as file:
         return yaml.safe_load(file)
+
 
 config = load_config()
 
 # Use configuration values
-POSTGRES_SCHEMA = config['postgresql']['schema']
-POSTGRES_TABLE = config['postgresql']['table']
-USER_EVENT_COLS = config['columns']['user_events']
+POSTGRES_SCHEMA = config["postgresql"]["schema"]
+POSTGRES_TABLE = config["postgresql"]["table"]
+USER_EVENT_COLS = config["columns"]["user_events"]
 
 # Load environment variables
 load_dotenv()
@@ -62,19 +61,20 @@ def create_table_if_not_exists():
             "password": os.getenv("POSTGRES_PASSWORD"),
         }
         dsn = " ".join([f"{k}={v}" for k, v in params.items() if v])
-        
+
         with (
             psycopg.connect(dsn, autocommit=True) as conn,
             conn.cursor() as cur,
         ):
             # Create schema if not exists - using sql.Identifier for safety
             from psycopg import sql
+
             cur.execute(
                 sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(
                     sql.Identifier(POSTGRES_SCHEMA)
                 )
             )
-            
+
             # Create table with all necessary columns
             cur.execute(
                 sql.SQL("""
@@ -103,37 +103,33 @@ def create_table_if_not_exists():
                         ingested_at TIMESTAMP NOT NULL
                     )
                 """).format(
-                    sql.Identifier(POSTGRES_SCHEMA),
-                    sql.Identifier(POSTGRES_TABLE)
+                    sql.Identifier(POSTGRES_SCHEMA), sql.Identifier(POSTGRES_TABLE)
                 )
             )
-            
+
             # Create indexes for better query performance
             cur.execute(
                 sql.SQL("""
-                    CREATE INDEX IF NOT EXISTS idx_user_id 
+                    CREATE INDEX IF NOT EXISTS idx_user_id
                     ON {}.{}(user_id)
                 """).format(
-                    sql.Identifier(POSTGRES_SCHEMA),
-                    sql.Identifier(POSTGRES_TABLE)
+                    sql.Identifier(POSTGRES_SCHEMA), sql.Identifier(POSTGRES_TABLE)
                 )
             )
             cur.execute(
                 sql.SQL("""
-                    CREATE INDEX IF NOT EXISTS idx_event_timestamp 
+                    CREATE INDEX IF NOT EXISTS idx_event_timestamp
                     ON {}.{}(event_timestamp)
                 """).format(
-                    sql.Identifier(POSTGRES_SCHEMA),
-                    sql.Identifier(POSTGRES_TABLE)
+                    sql.Identifier(POSTGRES_SCHEMA), sql.Identifier(POSTGRES_TABLE)
                 )
             )
             cur.execute(
                 sql.SQL("""
-                    CREATE INDEX IF NOT EXISTS idx_event_type 
+                    CREATE INDEX IF NOT EXISTS idx_event_type
                     ON {}.{}(event_type)
                 """).format(
-                    sql.Identifier(POSTGRES_SCHEMA),
-                    sql.Identifier(POSTGRES_TABLE)
+                    sql.Identifier(POSTGRES_SCHEMA), sql.Identifier(POSTGRES_TABLE)
                 )
             )
         logger.info(f"✅ Table {POSTGRES_SCHEMA}.{POSTGRES_TABLE} is ready")
@@ -153,12 +149,12 @@ def insert_single_user_event(record):
 
     columns = USER_EVENT_COLS
     for col in columns:
-        if not col.replace('_', '').isalnum():
+        if not col.replace("_", "").isalnum():
             raise ValueError(f"Invalid column name: {col}")
 
     try:
         from psycopg import sql
-        
+
         with get_connection() as conn:
             with conn.cursor() as cur:
                 # Use sql.SQL and sql.Identifier to prevent SQL injection
@@ -170,9 +166,9 @@ def insert_single_user_event(record):
                     sql.Identifier(POSTGRES_SCHEMA),
                     sql.Identifier(POSTGRES_TABLE),
                     sql.SQL(", ").join(map(sql.Identifier, columns)),
-                    sql.SQL(", ").join(sql.Placeholder() * len(columns))
+                    sql.SQL(", ").join(sql.Placeholder() * len(columns)),
                 )
-                
+
                 values = tuple(record.get(col) for col in columns)
                 cur.execute(query, values)
             conn.commit()
@@ -180,4 +176,3 @@ def insert_single_user_event(record):
     except Exception as e:
         logger.error(f"Error inserting user event: {e}")
         return False
-

@@ -3,15 +3,16 @@
 Test script to verify Kafka and PostgreSQL setup
 """
 
-import sys
 from pathlib import Path
+import sys
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import os
+
 from confluent_kafka import Consumer, Producer
 from dotenv import load_dotenv
-import os
 import yaml
 
 from config.logger import logger
@@ -26,7 +27,7 @@ except ImportError:
 def load_config():
     """Load configuration from YAML file."""
     config_path = Path(__file__).parent.parent / "config.yaml"
-    with open(config_path, 'r') as file:
+    with open(config_path) as file:
         return yaml.safe_load(file)
 
 
@@ -74,13 +75,15 @@ def test_postgres_connection():
             logger.error("❌ POSTGRES_PASSWORD environment variable is not set")
             logger.info("💡 Please check your .env file")
             return False
-        
+
         if not user:
             logger.error("❌ POSTGRES_USER environment variable is not set")
             return False
 
         # Build proper DSN with all components
-        dsn = f"host={host} port={port} dbname={database} user={user} password={password}"
+        dsn = (
+            f"host={host} port={port} dbname={database} user={user} password={password}"
+        )
         logger.info(f"Testing PostgreSQL connection to {user}@{host}:{port}/{database}")
 
         with (
@@ -94,7 +97,7 @@ def test_postgres_connection():
 
             # Test schema and table creation
             config = load_config()
-            schema = config['postgresql']['schema']
+            schema = config["postgresql"]["schema"]
 
             cur.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
 
@@ -137,10 +140,12 @@ def main():
     load_dotenv()
 
     logger.info("🚀 Starting setup verification...")
-    
+
     # Show environment variables being used
     logger.info("\n📋 Configuration:")
-    logger.info(f"   KAFKA_BOOTSTRAP_SERVERS: {os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')}")
+    logger.info(
+        f"   KAFKA_BOOTSTRAP_SERVERS: {os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')}"
+    )
     logger.info(f"   POSTGRES_HOST: {os.getenv('POSTGRES_HOST', 'localhost')}")
     logger.info(f"   POSTGRES_PORT: {os.getenv('POSTGRES_PORT', '5432')}")
     logger.info(f"   POSTGRES_DB: {os.getenv('POSTGRES_DB', 'staging_db')}")

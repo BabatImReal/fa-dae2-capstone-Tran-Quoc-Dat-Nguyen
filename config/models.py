@@ -5,8 +5,7 @@ This module contains Pydantic model definitions for structured data used across
 the application, providing better type safety, validation, and IDE support.
 """
 
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class PostgresConfig(BaseModel):

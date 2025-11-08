@@ -3,45 +3,49 @@ import logging
 import os
 import re
 
+from dotenv import load_dotenv
+
 # Third-party imports
 import pandas as pd
 import psycopg
 import snowflake.connector
-import yaml
-from dotenv import load_dotenv
 from snowflake.connector.pandas_tools import write_pandas
+import yaml
 
 # ------------------------------------------------------------
 # LOGGING SETUP
 # ------------------------------------------------------------
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 # ------------------------------------------------------------
 # CONFIG LOADER
 # ------------------------------------------------------------
 def load_config():
     """Load configuration from YAML file."""
-    with open("config.yaml", 'r') as file:
+    with open("config.yaml") as file:
         return yaml.safe_load(file)
+
 
 config = load_config()
 
-SNOWFLAKE_POSTGRE_TABLE = config['snowflake']['postgre_table']
-POSTGRES_SCHEMA = config['postgresql']['schema']
-POSTGRES_TABLE = config['postgresql']['table']
+SNOWFLAKE_POSTGRE_TABLE = config["snowflake"]["postgre_table"]
+POSTGRES_SCHEMA = config["postgresql"]["schema"]
+POSTGRES_TABLE = config["postgresql"]["table"]
+
 
 # ------------------------------------------------------------
 # SQL IDENTIFIER SANITIZER
 # ------------------------------------------------------------
 def sanitize_identifier(identifier):
     """Sanitize SQL identifiers to prevent injection."""
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$', identifier):
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$", identifier):
         raise ValueError(f"Invalid SQL identifier: {identifier}")
     return identifier
+
 
 # ------------------------------------------------------------
 # MAIN PIPELINE
@@ -95,7 +99,7 @@ def load_postgres_to_snowflake():
     )
 
     query = f"""
-        SELECT 
+        SELECT
             event_id,
             user_id,
             session_id,
@@ -150,7 +154,7 @@ def load_postgres_to_snowflake():
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
             # ✅ SAFE FIX: convert to ISO string format
-            df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+            df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
 
     # -------------------------------
     # Incremental load logic
@@ -201,8 +205,8 @@ def load_postgres_to_snowflake():
         success, nchunks, nrows, _ = write_pandas(
             sf_conn,
             df,
-            SNOWFLAKE_POSTGRE_TABLE.split('.')[-1],
-            schema=SNOWFLAKE_POSTGRE_TABLE.split('.')[0],
+            SNOWFLAKE_POSTGRE_TABLE.split(".")[-1],
+            schema=SNOWFLAKE_POSTGRE_TABLE.split(".")[0],
         )
         logger.info(
             f"✅ Successfully loaded {nrows} new records into {SNOWFLAKE_POSTGRE_TABLE}"
