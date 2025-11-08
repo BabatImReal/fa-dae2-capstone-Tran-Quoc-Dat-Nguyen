@@ -53,54 +53,89 @@ def create_table_if_not_exists():
     Returns True if successful, False otherwise.
     """
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                # Create schema if not exists
-                cur.execute(f"CREATE SCHEMA IF NOT EXISTS {POSTGRES_SCHEMA}")
-                
-                # Create table with all necessary columns
-                create_table_query = f"""
-                CREATE TABLE IF NOT EXISTS {POSTGRES_SCHEMA}.{POSTGRES_TABLE} (
-                    event_id VARCHAR(255) PRIMARY KEY,
-                    user_id VARCHAR(255) NOT NULL,
-                    session_id VARCHAR(255) NOT NULL,
-                    event_type VARCHAR(100) NOT NULL,
-                    event_timestamp TIMESTAMP NOT NULL,
-                    user_agent TEXT,
-                    ip_address VARCHAR(45),
-                    page_url TEXT,
-                    page_title TEXT,
-                    referrer TEXT,
-                    product_id VARCHAR(255),
-                    product_name TEXT,
-                    category VARCHAR(100),
-                    price NUMERIC(10, 2),
-                    quantity INTEGER,
-                    search_query TEXT,
-                    results_count INTEGER,
-                    filters_applied BOOLEAN,
-                    checkout_step VARCHAR(100),
-                    cart_value NUMERIC(10, 2),
-                    item_count INTEGER,
-                    ingested_at TIMESTAMP NOT NULL
+        # Get database connection string for autocommit mode
+        params = {
+            "host": os.getenv("POSTGRES_HOST", "localhost"),
+            "port": os.getenv("POSTGRES_PORT", "5432"),
+            "dbname": os.getenv("POSTGRES_DB", "staging_db"),
+            "user": os.getenv("POSTGRES_USER", "staging_user"),
+            "password": os.getenv("POSTGRES_PASSWORD"),
+        }
+        dsn = " ".join([f"{k}={v}" for k, v in params.items() if v])
+        
+        with (
+            psycopg.connect(dsn, autocommit=True) as conn,
+            conn.cursor() as cur,
+        ):
+            # Create schema if not exists - using sql.Identifier for safety
+            from psycopg import sql
+            cur.execute(
+                sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(
+                    sql.Identifier(POSTGRES_SCHEMA)
                 )
-                """
-                cur.execute(create_table_query)
-                
-                # Create indexes for better query performance
-                cur.execute(f"""
+            )
+            
+            # Create table with all necessary columns
+            cur.execute(
+                sql.SQL("""
+                    CREATE TABLE IF NOT EXISTS {}.{} (
+                        event_id VARCHAR(255) PRIMARY KEY,
+                        user_id VARCHAR(255) NOT NULL,
+                        session_id VARCHAR(255) NOT NULL,
+                        event_type VARCHAR(100) NOT NULL,
+                        event_timestamp TIMESTAMP NOT NULL,
+                        user_agent TEXT,
+                        ip_address VARCHAR(45),
+                        page_url TEXT,
+                        page_title TEXT,
+                        referrer TEXT,
+                        product_id VARCHAR(255),
+                        product_name TEXT,
+                        category VARCHAR(100),
+                        price NUMERIC(10, 2),
+                        quantity INTEGER,
+                        search_query TEXT,
+                        results_count INTEGER,
+                        filters_applied BOOLEAN,
+                        checkout_step VARCHAR(100),
+                        cart_value NUMERIC(10, 2),
+                        item_count INTEGER,
+                        ingested_at TIMESTAMP NOT NULL
+                    )
+                """).format(
+                    sql.Identifier(POSTGRES_SCHEMA),
+                    sql.Identifier(POSTGRES_TABLE)
+                )
+            )
+            
+            # Create indexes for better query performance
+            cur.execute(
+                sql.SQL("""
                     CREATE INDEX IF NOT EXISTS idx_user_id 
-                    ON {POSTGRES_SCHEMA}.{POSTGRES_TABLE}(user_id)
-                """)
-                cur.execute(f"""
+                    ON {}.{}(user_id)
+                """).format(
+                    sql.Identifier(POSTGRES_SCHEMA),
+                    sql.Identifier(POSTGRES_TABLE)
+                )
+            )
+            cur.execute(
+                sql.SQL("""
                     CREATE INDEX IF NOT EXISTS idx_event_timestamp 
-                    ON {POSTGRES_SCHEMA}.{POSTGRES_TABLE}(event_timestamp)
-                """)
-                cur.execute(f"""
+                    ON {}.{}(event_timestamp)
+                """).format(
+                    sql.Identifier(POSTGRES_SCHEMA),
+                    sql.Identifier(POSTGRES_TABLE)
+                )
+            )
+            cur.execute(
+                sql.SQL("""
                     CREATE INDEX IF NOT EXISTS idx_event_type 
-                    ON {POSTGRES_SCHEMA}.{POSTGRES_TABLE}(event_type)
-                """)
-            conn.commit()
+                    ON {}.{}(event_type)
+                """).format(
+                    sql.Identifier(POSTGRES_SCHEMA),
+                    sql.Identifier(POSTGRES_TABLE)
+                )
+            )
         logger.info(f"✅ Table {POSTGRES_SCHEMA}.{POSTGRES_TABLE} is ready")
         return True
     except Exception as e:
@@ -122,16 +157,22 @@ def insert_single_user_event(record):
             raise ValueError(f"Invalid column name: {col}")
 
     try:
+        from psycopg import sql
+        
         with get_connection() as conn:
             with conn.cursor() as cur:
-                column_names = ", ".join(columns)
-                placeholders = ", ".join(["%s"] * len(columns))
-                query = f"""
-                        INSERT INTO {POSTGRES_SCHEMA}.{POSTGRES_TABLE}
-                        ({column_names})
-                        VALUES ({placeholders})
-                        ON CONFLICT (event_id) DO NOTHING
-                        """
+                # Use sql.SQL and sql.Identifier to prevent SQL injection
+                query = sql.SQL("""
+                    INSERT INTO {}.{} ({})
+                    VALUES ({})
+                    ON CONFLICT (event_id) DO NOTHING
+                """).format(
+                    sql.Identifier(POSTGRES_SCHEMA),
+                    sql.Identifier(POSTGRES_TABLE),
+                    sql.SQL(", ").join(map(sql.Identifier, columns)),
+                    sql.SQL(", ").join(sql.Placeholder() * len(columns))
+                )
+                
                 values = tuple(record.get(col) for col in columns)
                 cur.execute(query, values)
             conn.commit()
