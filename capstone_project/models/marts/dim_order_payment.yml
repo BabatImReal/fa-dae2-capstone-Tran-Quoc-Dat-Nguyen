@@ -2,21 +2,37 @@ version: 2
 
 models:
   - name: dim_order_payment
-    description: "Order payments dimension at order grain."
+    description: "Order payments dimension with SCD Type 2 history."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - effective_from
     columns:
       - name: order_payment_key
+        description: "Surrogate key including effective_from for versioning"
         tests:
           - not_null
           - unique
       - name: order_id
+        description: "Natural key - not unique due to SCD Type 2"
         tests:
           - not_null
-          - unique
           - relationships:
-              arguments:
-                to: ref('stg__orders')
-                field: order_id
+              to: ref('stg__orders')
+              field: order_id
+              where: "is_current = true"  # Only check current records
       - name: primary_payment_type
         tests:
           - accepted_values:
               values: [credit_card, boleto, voucher, debit_card, not_defined]
+      - name: is_current
+        description: "Boolean flag indicating if this is the current version"
+        tests:
+          - not_null
+      - name: effective_from
+        description: "Timestamp when this version became effective"
+        tests:
+          - not_null
+      - name: effective_to
+        description: "Timestamp when this version was superseded (NULL for current)"

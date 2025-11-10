@@ -3,7 +3,7 @@
     schema='sc_analytics',) }}
 
 with date_spine as (
-    select dateadd('day', seq4(), '2020-01-01'::date) as date_value
+    select dateadd('day', seq4(), '2000-01-01'::date) as date_value
     from table(generator(rowcount => 36525)) -- ~100 years; adjust as needed
 ),
 

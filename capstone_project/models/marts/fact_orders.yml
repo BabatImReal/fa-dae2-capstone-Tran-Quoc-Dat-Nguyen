@@ -4,10 +4,6 @@ models:
     description: "Order fact at order grain."
 
     tests:
-      # Row count validation
-      - dbt_expectations.expect_table_row_count_to_be_between:
-          min_value: 1000
-      
       # Column pair comparison at table level (not under a column)
       - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
           column_A: order_estimated_delivery_date

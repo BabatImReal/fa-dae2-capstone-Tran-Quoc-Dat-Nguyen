@@ -11,7 +11,10 @@ with payments as (
         payment_type,
         payment_installments,
         payment_value,
-        loaded_at
+        loaded_at,
+        is_current,
+        effective_from,
+        effective_to
     from {{ ref('stg__order_payments') }}
 ),
 
@@ -47,13 +50,18 @@ order_agg as (
         max(payment_installments) as max_installments,
         -- 1 if any installment > 1 in the order
         max(case when payment_installments > 1 then 1 else 0 end) as has_installments_flag,
-        max(loaded_at) as loaded_at
+        max(loaded_at) as loaded_at,
+        -- SCD Type 2 attributes (take from latest record per order)
+        max(case when is_current then 1 else 0 end) as is_current,
+        max(effective_from) as effective_from,
+        max(effective_to) as effective_to
     from payments
     group by order_id
 )
 
 select
-    {{ dbt_utils.generate_surrogate_key(['oa.order_id', 'oa.loaded_at']) }} as order_payment_key,
+    -- surrogate key (includes effective_from for SCD Type 2)
+    {{ dbt_utils.generate_surrogate_key(['oa.order_id', 'oa.effective_from']) }} as order_payment_key,
     oa.order_id,
     pt.primary_payment_type,
     oa.payment_types_count,
@@ -61,6 +69,13 @@ select
     oa.total_payment_value,
     oa.max_installments,
     oa.has_installments_flag,
+    
+    -- SCD Type 2 attributes
+    oa.is_current,
+    oa.effective_from,
+    oa.effective_to,
+    
+    -- metadata
     oa.loaded_at
 from order_agg as oa
 left join primary_type as pt

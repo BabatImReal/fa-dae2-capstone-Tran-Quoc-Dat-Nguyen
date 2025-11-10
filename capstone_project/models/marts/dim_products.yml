@@ -2,22 +2,27 @@ version: 2
 
 models:
   - name: dim_products
-    description: "Product dimension table containing product attributes and category information"
+    description: "Product dimension table with SCD Type 2 history"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - product_id
+            - effective_from
     columns:
       - name: product_key
-        description: "Surrogate key for product dimension (MD5 hash of product_id)"
+        description: "Surrogate key including effective_from for versioning"
         tests:
           - unique
           - not_null
 
       - name: product_id
-        description: "Natural key - unique identifier for each product"
+        description: "Natural key - not unique due to SCD Type 2"
         tests:
-          - unique
           - not_null
           - relationships:
               to: ref('stg__products')
               field: product_id
+              where: "is_current = true"
 
       - name: product_category_english
         description: "Product category name translated to English"
@@ -101,3 +106,16 @@ models:
         description: "Timestamp when the record was loaded"
         tests:
           - not_null
+
+      - name: is_current
+        description: "Boolean flag indicating if this is the current version"
+        tests:
+          - not_null
+
+      - name: effective_from
+        description: "Timestamp when this version became effective"
+        tests:
+          - not_null
+
+      - name: effective_to
+        description: "Timestamp when this version was superseded (NULL for current)"

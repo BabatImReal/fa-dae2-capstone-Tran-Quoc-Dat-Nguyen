@@ -14,6 +14,6 @@ select
     customer_zip_code_prefix,
     customer_city,
     customer_state,
-    current_timestamp() as loaded_at
-from {{ ref('stg__customers') }}
+    loaded_at
+from {{ source('sc_raw_data', 'olist_customers') }}
 {% endsnapshot %}

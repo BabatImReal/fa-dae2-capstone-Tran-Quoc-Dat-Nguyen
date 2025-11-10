@@ -14,7 +14,10 @@ with stg_products as (
         product_length_cm,
         product_height_cm,
         product_width_cm,
-        loaded_at
+        loaded_at,
+        is_current,
+        effective_from,
+        effective_to
     from {{ ref('stg__products') }}
 ),
 
@@ -26,8 +29,8 @@ int_products as (
 )
 
 select
-    -- surrogate key
-    {{ dbt_utils.generate_surrogate_key(['sp.product_id', 'sp.loaded_at']) }} as product_key,
+    -- surrogate key (includes effective_from for SCD Type 2)
+    {{ dbt_utils.generate_surrogate_key(['sp.product_id', 'sp.effective_from']) }} as product_key,
 
     -- natural/business keys
     sp.product_id,
@@ -43,6 +46,11 @@ select
     sp.product_length_cm,
     sp.product_height_cm,
     sp.product_width_cm,
+
+    -- SCD Type 2 attributes
+    sp.is_current,
+    sp.effective_from,
+    sp.effective_to,
 
     -- metadata
     sp.loaded_at,
