@@ -2,15 +2,22 @@ version: 2
 
 models:
   - name: stg__order_payments
-    description: "Staging table for order payment information from the Brazilian e-commerce dataset"
+    description: "Staging table for order payment information with SCD Type 2 history"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - payment_sequential
+            - effective_from
     columns:
       - name: order_id
-        description: "Natural key - unique identifier for each order"
+        description: "Natural key (composite) - not unique due to SCD Type 2"
         tests:
           - not_null
           - relationships:
               to: ref('stg__orders')
               field: order_id
+              where: "is_current = true"  # Only check current records
 
       - name: payment_sequential
         description: "Sequential number for payments made on the same order"
@@ -62,8 +69,21 @@ models:
           - not_null
 
       - name: source_system
-        description: "Source system identifier (always 'olist' for this dataset)"
+        description: "Source system identifier"
         tests:
           - not_null
           - accepted_values:
-              values: ['csv']
+              values: ['snapshot']
+
+      - name: is_current
+        description: "Boolean flag indicating if this is the current version"
+        tests:
+          - not_null
+
+      - name: effective_from
+        description: "Timestamp when this version became effective"
+        tests:
+          - not_null
+
+      - name: effective_to
+        description: "Timestamp when this version was superseded (NULL for current)"

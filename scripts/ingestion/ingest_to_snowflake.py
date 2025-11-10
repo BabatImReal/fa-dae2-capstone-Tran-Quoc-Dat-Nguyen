@@ -149,8 +149,9 @@ def load_csv_file_from_stage_to_table(
     table = sanitize_identifier(table_fqn)
     stage = sanitize_identifier(stage_fqn)
 
-    # Validate file pattern to prevent SQL injection - only allow safe characters
-    if not re.match(r"^[a-zA-Z0-9._\-*?/\\]+$", file_pattern):
+    # Validate file pattern to prevent SQL injection - allow safe characters and regex escapes
+    # Allow: alphanumeric, dots, hyphens, underscores, wildcards (*?), path separators, backslashes (for escaping), parentheses, pipes (for regex)
+    if not re.match(r"^[a-zA-Z0-9._\-*?/\\()|]+$", file_pattern):
         raise ValueError(f"Invalid file pattern: {file_pattern}")
 
     # Build target column list (sanitized) and append LOADED_AT/SOURCE_SYSTEM

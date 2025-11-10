@@ -2,9 +2,24 @@ version: 2
 
 models:
     - name: stg__products
-      description: "Staged olist_products"
+      description: "Staged olist_products with SCD Type 2 history"
+      tests:
+        - dbt_utils.unique_combination_of_columns:
+            combination_of_columns:
+              - product_id
+              - effective_from
       columns:
         - name: product_id
+          description: "Natural key - not unique due to SCD Type 2"
           tests:
             - not_null
-            - unique
+        - name: is_current
+          description: "Boolean flag indicating if this is the current version"
+          tests:
+            - not_null
+        - name: effective_from
+          description: "Timestamp when this version became effective"
+          tests:
+            - not_null
+        - name: effective_to
+          description: "Timestamp when this version was superseded (NULL for current)"

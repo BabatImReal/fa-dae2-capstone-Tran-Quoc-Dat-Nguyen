@@ -2,21 +2,37 @@ version: 2
 
 models:
   - name: dim_sellers
-    description: "Sellers dimension."
+    description: "Sellers dimension with SCD Type 2 history."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - seller_id
+            - effective_from
     columns:
       - name: seller_key
+        description: "Surrogate key including effective_from for versioning"
         tests:
           - not_null
           - unique
       - name: seller_id
+        description: "Natural key - not unique due to SCD Type 2"
         tests:
           - not_null
-          - unique
           - relationships:
-              arguments:
-                to: ref('stg__sellers')
-                field: seller_id
+              to: ref('stg__sellers')
+              field: seller_id
+              where: "is_current = true"
       - name: seller_state
         tests:
           - accepted_values:
               values: [AC, AL, AP, AM, BA, CE, DF, ES, GO, MA, MT, MS, MG, PA, PB, PR, PE, PI, RJ, RN, RS, RO, RR, SC, SP, SE, TO]
+      - name: is_current
+        description: "Boolean flag indicating if this is the current version"
+        tests:
+          - not_null
+      - name: effective_from
+        description: "Timestamp when this version became effective"
+        tests:
+          - not_null
+      - name: effective_to
+        description: "Timestamp when this version was superseded (NULL for current)"
