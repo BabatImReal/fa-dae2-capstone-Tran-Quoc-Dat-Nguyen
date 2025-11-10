@@ -54,3 +54,7 @@ Thumbs.db
 target/
 logs/
 dbt_packages/
+
+# Dagster temporary directories
+dagster-orchestrator/.tmp_dagster_home_*/
+.tmp_dagster_home_*/
