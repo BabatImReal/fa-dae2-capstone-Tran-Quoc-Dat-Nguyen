@@ -27,7 +27,7 @@ x-airflow-common: &airflow-common
     - ./.secret:/opt/airflow/.secret
   user: "${AIRFLOW_UID:-50000}:0"
   networks:
-    - fa-dae2-capstone_kafka_network
+    - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 
   depends_on: &airflow-common-depends-on
     redis:
       condition: service_healthy
@@ -50,7 +50,7 @@ services:
       start_period: 5s
     restart: always
     networks:
-      - fa-dae2-capstone_kafka_network
+      - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 
 
   redis:
     image: redis:7.2-bookworm
@@ -64,7 +64,7 @@ services:
       start_period: 30s
     restart: always
     networks:
-      - fa-dae2-capstone_kafka_network
+      - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 
 
   airflow-apiserver:
     <<: *airflow-common
@@ -251,5 +251,5 @@ volumes:
   postgres-db-volume:
 
 networks:
-  fa-dae2-capstone_kafka_network:
+  fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network :
     external: true
