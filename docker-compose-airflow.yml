@@ -71,6 +71,9 @@ services:
 
   airflow-apiserver:
     <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      AIRFLOW__API__WORKERS: '1'
     command: api-server
     ports:
       - "8080:8080"

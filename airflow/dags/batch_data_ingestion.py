@@ -8,7 +8,6 @@ This DAG:
 3. Triggers transformation DAG upon completion
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -16,15 +15,11 @@ import pendulum
 from airflow.decorators import dag, task
 from airflow.exceptions import AirflowException
 
-# Add project root to path for imports
+# Add project root to path for imports (only modify path, don't import heavy modules)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 # Also add /opt/airflow to path for container imports
 sys.path.insert(0, "/opt/airflow")
-
-# Import scripts
-from scripts.ingestion.collect_batch_data import main as collect_batch_data
-from scripts.ingestion.ingest_to_snowflake import main as ingest_to_snowflake
 
 
 @dag(
@@ -59,6 +54,8 @@ def batch_data_ingestion():
         Extracts to configured dlt_input_dir path
         """
         import logging
+        # Import heavy modules only at task execution time
+        from scripts.ingestion.collect_batch_data import main as collect_batch_data
 
         logging.info("🔄 Starting batch data collection from Kaggle...")
 
@@ -88,6 +85,8 @@ def batch_data_ingestion():
         **Output Tables**: Created in SC_RAW_DATA schema
         """
         import logging
+        # Import heavy modules only at task execution time
+        from scripts.ingestion.ingest_to_snowflake import main as ingest_to_snowflake
 
         logging.info("📤 Starting data ingestion to Snowflake...")
         logging.info(f"Extraction result: {extraction_result}")
