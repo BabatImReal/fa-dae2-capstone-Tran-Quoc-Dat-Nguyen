@@ -15,7 +15,7 @@ with snap as (
         dbt_valid_to as effective_to,
         loaded_at,
         (dbt_valid_to is null) as is_current
-    from {{ ref('customers_snapshot') }}
+    from {{ ref('stg__customers') }}
 )
 
 

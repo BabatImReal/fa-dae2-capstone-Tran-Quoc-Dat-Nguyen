@@ -6,7 +6,7 @@
 
 with snapshot_src as (
     select *
-    from {{ ref('sellers_snapshot') }}
+    from {{ ref('stg__sellers') }}
 )
 
 select
