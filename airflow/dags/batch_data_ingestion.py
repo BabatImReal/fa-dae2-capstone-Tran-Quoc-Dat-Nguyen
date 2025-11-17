@@ -19,6 +19,8 @@ from airflow.exceptions import AirflowException
 # Add project root to path for imports
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
+# Also add /opt/airflow to path for container imports
+sys.path.insert(0, "/opt/airflow")
 
 # Import scripts
 from scripts.ingestion.collect_batch_data import main as collect_batch_data

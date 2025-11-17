@@ -1,7 +1,7 @@
 x-airflow-common: &airflow-common
   build:
     context: .
-    dockerfile: ./airflow/Dockerfile.airflow
+    dockerfile: Dockerfile.airflow
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
@@ -23,8 +23,11 @@ x-airflow-common: &airflow-common
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/config:/opt/airflow/config
     - ./airflow/plugins:/opt/airflow/plugins
+    - ./scripts:/opt/airflow/scripts
     - ./requirements.txt:/requirements.txt
     - ./.secret:/opt/airflow/.secret
+    - ./kaggle.json:/home/airflow/.config/kaggle/kaggle.json
+    - ./config.yaml:/opt/airflow/config.yaml
   user: "${AIRFLOW_UID:-50000}:0"
   networks:
     - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 

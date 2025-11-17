@@ -1024,9 +1024,6 @@ name = "fa-dae2-capstone-tran-quoc-dat-nguyen"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "apache-airflow" },
-    { name = "apache-airflow-providers-postgres" },
-    { name = "apache-airflow-providers-snowflake" },
     { name = "confluent-kafka" },
     { name = "dbt-core" },
     { name = "dbt-snowflake" },
@@ -1044,6 +1041,9 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "apache-airflow" },
+    { name = "apache-airflow-providers-postgres" },
+    { name = "apache-airflow-providers-snowflake" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "sqlfluff" },
@@ -1057,9 +1057,6 @@ pr-ci = [
 
 [package.metadata]
 requires-dist = [
-    { name = "apache-airflow", specifier = "==3.0.6" },
-    { name = "apache-airflow-providers-postgres", specifier = ">=6.4.0" },
-    { name = "apache-airflow-providers-snowflake", specifier = ">=6.6.0" },
     { name = "confluent-kafka", specifier = ">=2.12.1" },
     { name = "dbt-core", specifier = ">=1.10.13" },
     { name = "dbt-snowflake", specifier = ">=1.10.2" },
@@ -1077,6 +1074,9 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "apache-airflow", specifier = "==3.0.6" },
+    { name = "apache-airflow-providers-postgres", specifier = ">=6.4.0" },
+    { name = "apache-airflow-providers-snowflake", specifier = ">=6.6.0" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "ruff", specifier = ">=0.13.3" },
     { name = "sqlfluff", specifier = ">=3.5.0" },

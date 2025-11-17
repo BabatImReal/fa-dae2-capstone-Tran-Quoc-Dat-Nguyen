@@ -1,0 +1,23 @@
+# Use official Apache Airflow image (3.0.6 with Python 3.12)
+FROM apache/airflow:3.0.6-python3.12
+
+# Set working directory
+WORKDIR /opt/airflow
+
+# -----------------------------
+# Install Python dependencies
+# -----------------------------
+
+# Copy the requirements.txt located in the ROOT of project
+COPY requirements.txt ./
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Add dbt to PATH globally
+ENV PATH="/home/airflow/.local/bin:${PATH}"
+
+# (Optional) Project files — skip if using volume mounts
+# COPY dags /opt/airflow/dags
+# COPY plugins /opt/airflow/plugins
+# COPY config /opt/airflow/config
