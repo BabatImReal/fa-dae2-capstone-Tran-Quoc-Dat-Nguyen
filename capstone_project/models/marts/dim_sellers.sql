@@ -17,6 +17,6 @@ select
     seller_state,
     dbt_valid_from as effective_from,
     dbt_valid_to as effective_to,
-    case when dbt_valid_to is null then true else false end as is_current,
+    coalesce(dbt_valid_to is null, false) as is_current,
     loaded_at
 from snapshot_src

@@ -14,14 +14,14 @@
     invalidate_hard_deletes=true
   )
 }}
-select
-    order_id,
-    order_item_id,
-    product_id,
-    seller_id,
-    shipping_limit_date,
-    price,
-    freight_value,
-    loaded_at
-from {{ source('sc_raw_data', 'olist_order_items') }}
+    select
+        order_id,
+        order_item_id,
+        product_id,
+        seller_id,
+        shipping_limit_date,
+        price,
+        freight_value,
+        loaded_at
+    from {{ source('sc_raw_data', 'olist_order_items') }}
 {% endsnapshot %}

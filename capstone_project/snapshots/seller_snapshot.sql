@@ -8,11 +8,11 @@
     invalidate_hard_deletes=true
   )
 }}
-select
-    seller_id,
-    seller_zip_code_prefix,
-    seller_city,
-    seller_state,
-    loaded_at
-from {{ source('sc_raw_data', 'olist_sellers') }}
+    select
+        seller_id,
+        seller_zip_code_prefix,
+        seller_city,
+        seller_state,
+        loaded_at
+    from {{ source('sc_raw_data', 'olist_sellers') }}
 {% endsnapshot %}
