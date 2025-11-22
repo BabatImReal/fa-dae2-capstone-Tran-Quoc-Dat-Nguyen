@@ -31,7 +31,7 @@ docker-compose -f docker-compose-airflow.yml exec -T airflow-scheduler airflow c
     --conn-type 'postgres' \
     --conn-login "$POSTGRES_USER" \
     --conn-password "$POSTGRES_PASSWORD" \
-    --conn-host "localhost" \
+    --conn-host "m01w02-postgres" \
     --conn-port "$POSTGRES_PORT" \
     --conn-schema "$POSTGRES_DB"
 

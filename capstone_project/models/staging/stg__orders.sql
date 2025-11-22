@@ -16,8 +16,8 @@ renamed as (
         CAST(order_delivered_carrier_date as TIMESTAMP_NTZ) as order_delivered_carrier_date,
         CAST(order_delivered_customer_date as TIMESTAMP_NTZ) as order_delivered_customer_date,
         CAST(order_estimated_delivery_date as TIMESTAMP_NTZ) as order_estimated_delivery_date,
-        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
-        CAST(source_system as VARCHAR) as source_system
+        CURRENT_TIMESTAMP() as loaded_at,
+        'csv' as source_system
     from source
 )
 

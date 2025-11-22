@@ -15,8 +15,8 @@ renamed as (
         CAST(shipping_limit_date as TIMESTAMP_NTZ) as shipping_limit_date,
         CAST(price as NUMBER(12, 2)) as price,
         CAST(freight_value as NUMBER(12, 2)) as freight_value,
-        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
-        CAST(source_system as VARCHAR) as source_system
+        CURRENT_TIMESTAMP() as loaded_at,
+        'csv' as source_system
     from source
 )
 

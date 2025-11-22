@@ -4,18 +4,37 @@ Transforms raw data using dbt build command.
 
 This DAG:
 1. Runs dbt build which executes snapshots, models, and tests in order
-2. Generates execution report
+2. Uses @task.bash for simple dbt execution with environment variables
 """
 
+import base64
+import json
 import os
-from pathlib import Path
 
 import pendulum
 from airflow.decorators import dag, task
-from airflow.exceptions import AirflowException
+from airflow.hooks.base import BaseHook
 
-# Project root for dbt commands
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def get_dbt_snowflake_env_vars():
+    """
+    Get dbt Snowflake environment variables from Airflow connections.
+    Decodes base64-encoded private key using Python since Jinja2 doesn't have b64decode filter.
+    """
+
+    return {
+        "SNOWFLAKE_ACCOUNT": "{{ conn.snowflake_default.extra_dejson.account }}",
+        "SNOWFLAKE_USER": "{{ conn.snowflake_default.login }}",
+        "SNOWFLAKE_PRIVATE_KEY_FILE_PWD": "{{ conn.snowflake_default.password }}",
+        "SNOWFLAKE_ROLE": "{{ conn.snowflake_default.extra_dejson.role }}",
+        "SNOWFLAKE_WAREHOUSE": "{{ conn.snowflake_default.extra_dejson.warehouse }}",
+        "SNOWFLAKE_DATABASE": "{{ conn.snowflake_default.extra_dejson.database }}",
+        "SNOWFLAKE_SCHEMA": "{{ conn.snowflake_default.schema }}",
+        "SNOWFLAKE_PRIVATE_KEY_FILE_PATH": "{{ conn.snowflake_default.extra_dejson.private_key_file }}",
+        "DBT_PROFILES_DIR": "/opt/airflow/capstone_project/.dbt",
+        "DBT_PROJECT_DIR": "/opt/airflow/capstone_project",
+        "PATH": "/home/airflow/.local/bin:" + os.environ.get("PATH", ""),
+    }
 
 
 @dag(
@@ -41,8 +60,8 @@ def batch_data_transformation():
     **Outputs**: Dimension tables (snapshots) and fact/mart tables in appropriate schemas
     """
 
-    @task()
-    def run_dbt_build():
+    @task.bash(env={**get_dbt_snowflake_env_vars()}, cwd="/opt/airflow/capstone_project")
+    def dbt_build() -> str:
         """
         #### dbt Build Task
         Runs dbt build to execute snapshots, models, and tests in dependency order.
@@ -53,42 +72,34 @@ def batch_data_transformation():
         - Builds marts layer for analytics-ready tables
         - Executes tests to validate data quality
         """
-        import logging
-        import subprocess
-
-        logging.info("🏗️ Running dbt build...")
-
-        try:
-            # Change to dbt project directory
-            dbt_project_path = PROJECT_ROOT / "capstone_project"
-            os.chdir(dbt_project_path)
-
-            # Run dbt build (includes snapshots, run, test)
-            result = subprocess.run(
-                ["dbt", "build"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-
-            logging.info("dbt build output:")
-            logging.info(result.stdout)
-            logging.info("✅ dbt build executed successfully")
-
-            return {
-                "status": "success",
-                "message": "dbt build completed",
-                "timestamp": pendulum.now().isoformat(),
-            }
-        except subprocess.CalledProcessError as e:
-            logging.error(f"❌ dbt build failed: {e.stderr}")
-            raise AirflowException(f"dbt build execution failed: {e.stderr}")
-        except Exception as e:
-            logging.error(f"❌ Unexpected error in dbt build: {str(e)}")
-            raise AirflowException(f"dbt build failed: {str(e)}")
+        return """
+        set -e  # Exit on error
+        
+        echo "🏗️ Starting dbt build process..."
+        echo "📂 Working directory: $(pwd)"
+        echo "🔧 dbt version: $(dbt --version)"
+        echo ""
+        
+        echo "📦 Installing dbt dependencies..."
+        dbt deps
+        echo ""
+        
+        # Run dbt build and capture exit code
+        if dbt build; then
+            echo ""
+            echo "✅ dbt build completed successfully"
+            exit 0
+        else
+            EXIT_CODE=$?
+            echo ""
+            echo "❌ dbt build failed with exit code: $EXIT_CODE"
+            echo "Check the logs above for detailed error messages"
+            exit $EXIT_CODE
+        fi
+        """
 
     # Execute the task
-    run_dbt_build()
+    dbt_build()
 
 
 # Create the DAG instance

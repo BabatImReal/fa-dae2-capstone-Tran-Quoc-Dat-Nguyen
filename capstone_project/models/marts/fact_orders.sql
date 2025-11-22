@@ -201,7 +201,7 @@ left join dim_date as d_estimated
 {% if is_incremental() %}
     where
         o.loaded_at > (
-            select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ntz))
+            select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ltz))
             from {{ this }}
         )
 {% endif %}

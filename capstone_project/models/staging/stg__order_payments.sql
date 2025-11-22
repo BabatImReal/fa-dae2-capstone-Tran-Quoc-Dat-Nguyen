@@ -16,7 +16,7 @@ renamed as (
         CAST(payment_type as VARCHAR) as payment_type,
         CAST(payment_installments as NUMBER) as payment_installments,
         CAST(payment_value as NUMBER(12, 2)) as payment_value,
-        CAST(loaded_at as TIMESTAMP_NTZ) as loaded_at,
+        CAST(loaded_at as TIMESTAMP_LTZ) as loaded_at,
         (dbt_valid_to is null) as is_current
     from source
 )
