@@ -69,12 +69,12 @@ select
     oa.total_payment_value,
     oa.max_installments,
     oa.has_installments_flag,
-    
+
     -- SCD Type 2 attributes
     oa.is_current,
     oa.effective_from,
     oa.effective_to,
-    
+
     -- metadata
     oa.loaded_at
 from order_agg as oa

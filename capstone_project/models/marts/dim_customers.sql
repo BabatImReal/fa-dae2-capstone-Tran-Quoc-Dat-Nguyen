@@ -11,13 +11,12 @@ with snap as (
         customer_zip_code_prefix,
         customer_city,
         customer_state,
-        dbt_valid_from as effective_from,
-        dbt_valid_to as effective_to,
+        effective_from,
+        effective_to,
         loaded_at,
-        (dbt_valid_to is null) as is_current
-    from {{ ref('customers_snapshot') }}
+        is_current
+    from {{ ref('stg__customers') }}
 )
-
 
 select
     {{ dbt_utils.generate_surrogate_key(['snap.customer_id', 'snap.effective_from']) }} as customer_key,
@@ -26,14 +25,12 @@ select
     snap.customer_zip_code_prefix,
     snap.customer_city,
     snap.customer_state,
-    
-    
+
     -- SCD Type 2 attributes
     snap.is_current,
     snap.effective_from,
     snap.effective_to,
-    
+
     -- Metadata
     snap.loaded_at
 from snap
-

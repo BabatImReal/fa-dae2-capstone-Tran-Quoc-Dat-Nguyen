@@ -17,12 +17,12 @@ select
     review_score,
     review_creation_date,
     review_answer_timestamp,
-    
+
     -- SCD Type 2 attributes
     is_current,
     effective_from,
     effective_to,
-    
+
     -- metadata
     loaded_at
 from src

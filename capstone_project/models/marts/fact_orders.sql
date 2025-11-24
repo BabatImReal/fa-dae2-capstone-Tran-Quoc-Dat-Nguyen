@@ -168,17 +168,17 @@ left join dim_sellers as s
         and s.effective_to is null              -- Current seller record only
 
 left join dim_order_payment as p
-    on 
+    on
         o.order_id = p.order_id
         and p.effective_to is null              -- Current payment record only
 
 left join first_review_record as r
-    on 
+    on
         o.order_id = r.order_id
         and r.effective_to is null              -- Current review record only
 
 left join dim_product as dp
-    on 
+    on
         ioi.product_id = dp.product_id
         and dp.effective_to is null             -- Current product record only
 
@@ -201,7 +201,7 @@ left join dim_date as d_estimated
 {% if is_incremental() %}
     where
         o.loaded_at > (
-            select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ntz))
+            select dateadd(day, -1, coalesce(max(loaded_at), '1900-01-01'::timestamp_ltz))
             from {{ this }}
         )
 {% endif %}

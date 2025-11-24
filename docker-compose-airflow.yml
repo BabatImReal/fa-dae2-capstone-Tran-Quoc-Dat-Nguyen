@@ -1,12 +1,12 @@
 x-airflow-common: &airflow-common
   build:
     context: .
-    dockerfile: ./airflow/Dockerfile.airflow
+    dockerfile: Dockerfile.airflow
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflow-postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ""
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
@@ -18,31 +18,37 @@ x-airflow-common: &airflow-common
     TZ: Asia/Bangkok
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     AIRFLOW_CONFIG: "/opt/airflow/config/airflow.cfg"
+    # Disable remote log server (use local file logs only)
+    AIRFLOW__LOGGING__WORKER_LOG_SERVER_PORT: ""
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/config:/opt/airflow/config
     - ./airflow/plugins:/opt/airflow/plugins
+    - ./scripts:/opt/airflow/scripts
     - ./requirements.txt:/requirements.txt
-    - ./.secret:/opt/airflow/.secret
+    - ./rsa_key.pem:/opt/airflow/.secret/rsa_key.pem
+    - ./kaggle.json:/home/airflow/.config/kaggle/kaggle.json
+    - ./config.yaml:/opt/airflow/config.yaml
+    - ./capstone_project:/opt/airflow/capstone_project
   user: "${AIRFLOW_UID:-50000}:0"
   networks:
-    - fa-dae2-capstone_kafka_network
+    - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 
   depends_on: &airflow-common-depends-on
     redis:
       condition: service_healthy
-    postgres:
+    airflow-postgres:
       condition: service_healthy
 
 services:
-  postgres:
+  airflow-postgres:
     image: postgres:13
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
+      - airflow-postgres-volume:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -50,7 +56,7 @@ services:
       start_period: 5s
     restart: always
     networks:
-      - fa-dae2-capstone_kafka_network
+      - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 
 
   redis:
     image: redis:7.2-bookworm
@@ -64,10 +70,13 @@ services:
       start_period: 30s
     restart: always
     networks:
-      - fa-dae2-capstone_kafka_network
+      - fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network 
 
   airflow-apiserver:
     <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      AIRFLOW__API__WORKERS: '1'
     command: api-server
     ports:
       - "8080:8080"
@@ -248,8 +257,8 @@ services:
     user: "0:0"
 
 volumes:
-  postgres-db-volume:
+  airflow-postgres-volume:
 
 networks:
-  fa-dae2-capstone_kafka_network:
+  fa-dae2-capstone-tran-quoc-dat-nguyen_capstone_kafka_network :
     external: true

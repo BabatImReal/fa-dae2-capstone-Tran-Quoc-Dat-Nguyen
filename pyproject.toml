@@ -5,42 +5,37 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "apache-airflow-providers-postgres>=6.4.0",
-    "apache-airflow-providers-snowflake>=6.6.0",
-    "apache-airflow[celery]==3.1.2",
     "confluent-kafka>=2.12.1",
     "dbt-core>=1.10.13",
     "dbt-snowflake>=1.10.2",
     "faker>=37.6.0",
-    "flask>=2.3.0,<3.0.0",
     "kaggle>=1.7.4.5",
     "kagglehub>=0.3.13",
-    "openaq>=0.4.0",
     "pandas>=2.3.2",
     "polars>=1.33.0",
     "psycopg[binary]>=3.2.10",
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
     "rich>=14.1.0",
-    "ruff>=0.13.3",
     "snowflake-connector-python[pandas]>=3.17.3",
-    "sqlfluff>=3.5.0",
-    "sqlfluff-templater-dbt>=3.5.0",
-    "stripe>=12.5.1",
 ]
 
 [dependency-groups]
 
 pr_ci = [
-    "dbt-snowflake>=1.10.0",
-    "sqlfluff>=3.4.2",
-    "sqlfluff-templater-dbt>=3.4.2",
+    "ruff>=0.13.3",
+    "sqlfluff>=3.5.0",
+    "sqlfluff-templater-dbt>=3.5.0",
 ]
 
 dev = [
+    "apache-airflow==3.0.6",
+    "apache-airflow-providers-postgres>=6.4.0",
+    "apache-airflow-providers-snowflake>=6.6.0",
     "pytest>=8.4.2",
-    "sqlfluff>=3.4.2",
-    "sqlfluff-templater-dbt>=3.4.2",
+    "ruff>=0.13.3",
+    "sqlfluff>=3.5.0",
+    "sqlfluff-templater-dbt>=3.5.0",
 ]
 
 [tool.ruff]

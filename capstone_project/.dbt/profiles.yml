@@ -23,4 +23,4 @@ capstone_project:
       private_key_passphrase: "{{ env_var('SNOWFLAKE_CI_PRIVATE_KEY_PWD') }}"
       threads: 4
 
-  target: ci
+  target: dev

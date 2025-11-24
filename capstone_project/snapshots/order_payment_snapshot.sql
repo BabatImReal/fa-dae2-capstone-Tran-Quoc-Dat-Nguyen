@@ -8,12 +8,12 @@
     invalidate_hard_deletes=true
   )
 }}
-select
-    order_id,
-    payment_sequential,
-    payment_type,
-    payment_installments,
-    payment_value,
-    loaded_at
-from {{ source('sc_raw_data', 'olist_order_payments') }}
+    select
+        order_id,
+        payment_sequential,
+        payment_type,
+        payment_installments,
+        payment_value,
+        loaded_at
+    from {{ source('sc_raw_data', 'olist_order_payments') }}
 {% endsnapshot %}
