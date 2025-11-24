@@ -61,13 +61,50 @@ def batch_data_transformation():
     """
 
     @task.bash(env={**get_dbt_snowflake_env_vars()}, cwd="/opt/airflow/capstone_project")
+    def dbt_snapshot() -> str:
+        """
+        #### dbt Snapshot Task
+        Runs dbt snapshot to capture slowly changing dimensions.
+
+        Creates point-in-time snapshots of dimension tables with:
+        - dbt_valid_from: When the record became active
+        - dbt_valid_to: When the record was superseded (null if current)
+        - dbt_scd_id: Unique identifier for the snapshot record
+        - dbt_updated_at: Timestamp of last update
+        """
+        return """
+        set -e  # Exit on error
+        
+        echo "📸 Starting dbt snapshot process..."
+        echo "📂 Working directory: $(pwd)"
+        echo "🔧 dbt version: $(dbt --version)"
+        echo ""
+        
+        echo "📦 Installing dbt dependencies..."
+        dbt deps
+        echo ""
+        
+        # Run dbt snapshot and capture exit code
+        if dbt snapshot; then
+            echo ""
+            echo "✅ dbt snapshot completed successfully"
+            exit 0
+        else
+            EXIT_CODE=$?
+            echo ""
+            echo "❌ dbt snapshot failed with exit code: $EXIT_CODE"
+            echo "Check the logs above for detailed error messages"
+            exit $EXIT_CODE
+        fi
+        """
+
+    @task.bash(env={**get_dbt_snowflake_env_vars()}, cwd="/opt/airflow/capstone_project")
     def dbt_build() -> str:
         """
         #### dbt Build Task
-        Runs dbt build to execute snapshots, models, and tests in dependency order.
+        Runs dbt build to execute models and tests in dependency order.
 
         dbt build:
-        - Executes snapshots for slowly changing dimensions
         - Runs staging models to clean and normalize raw data
         - Builds marts layer for analytics-ready tables
         - Executes tests to validate data quality
@@ -77,11 +114,6 @@ def batch_data_transformation():
         
         echo "🏗️ Starting dbt build process..."
         echo "📂 Working directory: $(pwd)"
-        echo "🔧 dbt version: $(dbt --version)"
-        echo ""
-        
-        echo "📦 Installing dbt dependencies..."
-        dbt deps
         echo ""
         
         # Run dbt build and capture exit code
@@ -98,8 +130,8 @@ def batch_data_transformation():
         fi
         """
 
-    # Execute the task
-    dbt_build()
+    # Execute tasks in sequence
+    dbt_snapshot() >> dbt_build()
 
 
 # Create the DAG instance
