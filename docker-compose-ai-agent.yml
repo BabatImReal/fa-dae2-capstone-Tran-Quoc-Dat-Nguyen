@@ -3,11 +3,11 @@ services:
   langgraph-postgres:
     image: postgres:17.4
     environment:
-      POSTGRES_USER: ${LANGGRAPH_POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${LANGGRAPH_POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${LANGGRAPH_POSTGRES_DB:-langgraph_memory}
+      POSTGRES_USER: ${LANGGRAPH_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${LANGGRAPH_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${LANGGRAPH_POSTGRES_DB}
     ports:
-      - "${LANGGRAPH_POSTGRES_PORT:-5433}:5432"
+      - "${LANGGRAPH_POSTGRES_PORT}:5432"
     volumes:
       - langgraph_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${LANGGRAPH_POSTGRES_USER:-postgres} -d ${LANGGRAPH_POSTGRES_DB:-langgraph_memory}",
+          "pg_isready -U ${LANGGRAPH_POSTGRES_USER} -d ${LANGGRAPH_POSTGRES_DB}",
         ]
       interval: 10s
       timeout: 5s
