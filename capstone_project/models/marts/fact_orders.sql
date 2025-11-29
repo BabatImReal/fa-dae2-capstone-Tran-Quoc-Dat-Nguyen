@@ -95,7 +95,7 @@ first_review_record as (
 
 dim_date as (
     select
-        date_id,
+        date_key,
         date_value,
         year,
         month,
@@ -116,11 +116,11 @@ select
     p.order_payment_key,
     r.order_review_key,
     dp.product_key,              -- FIXED: Now properly joined
-    d_purchase.date_id as order_date_key, -- Purchase date key
-    d_approved.date_id as order_approved_date_key,
-    d_carrier.date_id as order_delivered_carrier_date_key,
-    d_customer.date_id as order_delivered_customer_date_key,
-    d_estimated.date_id as order_estimated_delivery_date_key,
+    d_purchase.date_key as order_date_key, -- Purchase date key (use date_key)
+    d_approved.date_key as order_approved_date_key,
+    d_carrier.date_key as order_delivered_carrier_date_key,
+    d_customer.date_key as order_delivered_customer_date_key,
+    d_estimated.date_key as order_estimated_delivery_date_key,
 
     -- natural ids (for traceability)
     o.customer_id,
@@ -184,19 +184,19 @@ left join dim_product as dp
 
 -- join date dimension for multiple order timestamps (use simple ::date casting)
 left join dim_date as d_purchase
-    on d_purchase.date_value = o.order_purchase_timestamp::date  -- purchase date
+    on d_purchase.date_value = o.order_purchase_timestamp::date  -- purchase date (join on date_value to use date_key)
 
 left join dim_date as d_approved
-    on d_approved.date_value = o.order_approved_at::date  -- approval date
+    on d_approved.date_value = o.order_approved_at::date  -- approval date (join on date_value to use date_key)
 
 left join dim_date as d_carrier
-    on d_carrier.date_value = o.order_delivered_carrier_date::date  -- carrier delivery date
+    on d_carrier.date_value = o.order_delivered_carrier_date::date  -- carrier delivery date (join on date_value to use date_key)
 
 left join dim_date as d_customer
-    on d_customer.date_value = o.order_delivered_customer_date::date  -- customer delivery date
+    on d_customer.date_value = o.order_delivered_customer_date::date  -- customer delivery date (join on date_value to use date_key)
 
 left join dim_date as d_estimated
-    on d_estimated.date_value = o.order_estimated_delivery_date::date  -- estimated delivery date
+    on d_estimated.date_value = o.order_estimated_delivery_date::date  -- estimated delivery date (join on date_value to use date_key)
 
 {% if is_incremental() %}
     where
