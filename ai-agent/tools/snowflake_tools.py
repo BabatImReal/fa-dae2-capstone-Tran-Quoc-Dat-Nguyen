@@ -131,3 +131,53 @@ def get_shipping_tier_summary(tier: str) -> Dict[str, Any]:
         "row_count": len(rows),
         "rows": [dict(zip(columns, r)) for r in rows]
     }
+
+@tool("get_order_summary_by_quarter")
+def get_order_summary_by_quarter(params: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Return order summary for a specific year + quarter.
+    Required params:
+        - year (e.g., '2017')
+        - quarter (e.g., '4')
+    """
+
+    # Extract safely
+    year = validate_identifier(params.get("year", ""))
+    quarter = validate_identifier(params.get("quarter", ""))
+
+    if not year or not quarter:
+        return {"error": "Both 'year' and 'quarter' must be provided."}
+
+    sql = f"""
+        SELECT 
+            d.year,
+            d.quarter,
+            COUNT(fo.order_id) AS total_orders,
+            SUM(fo.total_order_value) AS total_revenue,
+            AVG(fo.shipping_date) AS avg_shipping_date,
+            AVG(fo.review_score) AS avg_review_score,
+            COUNT(DISTINCT fo.customer_id) AS unique_customers
+        FROM sc_analytics.fact_orders fo
+        JOIN sc_analytics.dim_date d 
+            ON d.date_key = fo.order_date_key
+        WHERE d.year = '{year}'
+          AND d.quarter = '{quarter}'
+        GROUP BY d.year, d.quarter
+        ORDER BY d.year, d.quarter
+    """.strip()
+
+    conn = get_snowflake_connection()
+    cur = conn.cursor()
+    cur.execute(sql)
+
+    rows = cur.fetchall()
+    columns = [col[0] for col in cur.description]
+
+    cur.close()
+    conn.close()
+
+    return {
+        "sql_used": sql,
+        "row_count": len(rows),
+        "rows": [dict(zip(columns, r)) for r in rows]
+    }
