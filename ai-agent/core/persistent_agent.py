@@ -113,9 +113,60 @@ def create_persistent_agent():
     # Add the chatbot node
     graph_builder.add_node("chatbot", enhanced_chatbot_node)
 
-    # Add edges
+    # Add an inspect node to print the state after the chatbot node runs
+    def inspect_state_node(state: PersistentAgentState):
+        messages = state.get("messages", [])
+        messages_len = len(messages)
+
+        # Header summary
+        print(
+            f"[inspect_state] user={state.get('user_name')} conv_count={state.get('conversation_count')} messages_len={messages_len}"
+        )
+
+        # Print stacked messages (role: content) one per line
+        print("[inspect_state] Message stack:")
+        for i, m in enumerate(messages, start=1):
+            # Determine content
+            if isinstance(m, dict):
+                role = m.get("role", "user")
+                content = m.get("content", "")
+            else:
+                # message objects may have .content and sometimes .role
+                content = getattr(m, "content", None)
+                role = getattr(m, "role", None)
+
+                if content is None:
+                    # fallback to string representation
+                    try:
+                        content = str(m)
+                    except Exception:
+                        content = "<unrepresentable>"
+
+                if role is None:
+                    # best-effort from class name
+                    cname = type(m).__name__.lower()
+                    if "human" in cname or "user" in cname:
+                        role = "user"
+                    elif "ai" in cname or "assistant" in cname:
+                        role = "assistant"
+                    else:
+                        role = "unknown"
+
+            # Truncate content for readability but show full lines stacked
+            preview = str(content)
+            # Print with index for clarity
+            print(f"  {i}. {role}: {preview}")
+
+        print("[inspect_state] end stack\n")
+
+        # Return state unchanged; this node is purely observational
+        return state
+
+    # Add edges: run chatbot then inspect the state before ending
     graph_builder.add_edge(START, "chatbot")
-    graph_builder.add_edge("chatbot", END)
+    graph_builder.add_node("inspect_state", inspect_state_node)
+    graph_builder.add_edge("chatbot", "inspect_state")
+    graph_builder.add_edge("inspect_state", END)
 
     # Create PostgreSQL checkpointer
     connection = create_postgres_connection()
@@ -130,7 +181,9 @@ def create_persistent_agent():
         print("✅ Connected to PostgreSQL for persistent storage")
 
     # Compile the graph with persistent memory
-    graph = graph_builder.compile(checkpointer=memory)
+    graph = graph_builder.compile(
+        checkpointer=memory,
+        interrupt_before=["tools"])
 
     return graph
 
