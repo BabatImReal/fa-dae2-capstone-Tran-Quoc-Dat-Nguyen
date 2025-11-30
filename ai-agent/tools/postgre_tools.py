@@ -1,0 +1,61 @@
+import os
+from typing import Dict, Any, List, Optional
+from dotenv import load_dotenv
+import psycopg
+from langchain.tools import tool
+
+load_dotenv()
+
+# Get a PostgreSQL database connection using environment variables
+def get_connection():
+    """Get database connection using environment variables."""
+    params = {
+        "host": os.getenv("POSTGRES_HOST"),
+        "port": os.getenv("POSTGRES_PORT"),
+        "dbname": os.getenv("POSTGRES_DB"),
+        "user": os.getenv("POSTGRES_USER"   ),
+        "password": os.getenv("POSTGRES_PASSWORD"),
+    }
+    return psycopg.connect(**params)
+
+@tool(
+    "get_latest_product_summary",
+    description="Return the latest ingested product event from PostgreSQL.",
+    args_schema={   # <-- REQUIRED JSON schema for tools
+        "type": "object",
+        "properties": {},   # No parameters required
+        "required": []
+    }
+)
+def get_latest_product_summary() -> Dict[str, Any]:
+    """
+    Query the most recent product event from staging.user_events.
+    Returns: product_name, category, price, quantity.
+    """
+
+    sql = """
+        SELECT
+            product_name,
+            category,
+            price,
+            quantity
+        FROM staging.user_events
+        ORDER BY ingested_at DESC
+        LIMIT 1
+    """.strip()
+
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(sql)
+
+    row = cur.fetchone()
+    columns = [desc[0] for desc in cur.description]
+
+    cur.close()
+    conn.close()
+
+    return {
+        "sql_used": sql,
+        "row_count": 1 if row else 0,
+        "row": dict(zip(columns, row)) if row else None
+    }

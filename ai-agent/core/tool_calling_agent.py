@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.snowflake_tools import (
+    get_all_product_categories,
     get_product_by_category, 
     get_all_shipping_tiers, 
     get_shipping_tier_summary, 
@@ -44,7 +45,7 @@ def create_tool_calling_agent():
     )
 
     # Create tool registry
-    tools = [get_product_by_category, get_all_shipping_tiers, get_shipping_tier_summary, get_order_summary_by_quarter]
+    tools = [get_all_product_categories, get_product_by_category, get_all_shipping_tiers, get_shipping_tier_summary, get_order_summary_by_quarter]
     tools_by_name = {tool.name: tool for tool in tools}
 
     # Augment the LLM with tools
