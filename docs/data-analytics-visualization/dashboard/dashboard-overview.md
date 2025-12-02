@@ -6,7 +6,7 @@ This folder contains documentation and assets for the **Fact Dashboard** built i
 
 The Fact Dashboard provides key business metrics and visualizations for the e-commerce dataset. It is designed to give stakeholders a quick, high-level view of orders, product categories, customer reviews, shipping performance, and payment trends.
 
-![Fact Dashboard](./fact-dashboard.png)
+![Fact Dashboard](./analytics-dashboard.png)
 
 ---
 
