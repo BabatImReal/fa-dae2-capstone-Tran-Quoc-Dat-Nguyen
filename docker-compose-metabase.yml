@@ -15,9 +15,9 @@ services:
       MB_DB_HOST: db
       MB_SAMPLE_DATA: false
     volumes:
-      - metabase-data:/var/lib/metabase/data
+      - metabase_data:/var/lib/metabase/data
     networks:
-      - metabase-net
+      - metabase_net
     healthcheck:
       test: curl --fail -I http://localhost:3000/api/health || exit 1
       interval: 15s
@@ -33,9 +33,9 @@ services:
       POSTGRES_USER: ${MB_DB_USER}
       POSTGRES_PASSWORD: ${MB_DB_PASS}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - metabase_postgres_data:/var/lib/postgresql/data
     networks:
-      - metabase-net
+      - metabase_net
     ports:
       - "5434:5432"
 
@@ -43,7 +43,7 @@ volumes:
   metabase_data:
     driver: local
   metabase_postgres_data:
-    driver:local
+    driver: local
 
 networks:
   metabase_net:
