@@ -80,6 +80,10 @@ def batch_data_transformation():
         echo "🔧 dbt version: $(dbt --version)"
         echo ""
         
+        echo "🧹 Cleaning dbt cache and packages..."
+        dbt clean
+        echo ""
+        
         echo "📦 Installing dbt dependencies..."
         dbt deps
         echo ""
