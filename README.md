@@ -29,6 +29,31 @@
 - **Star Schema Model**: See [methodology.md](docs/data-modelling/methodology.md) for detailed data modelling explanation.
 - **Entity Relationship Diagram (ERD)**: See [star-schema.png](docs/data-modelling/diagram/star-schema.png) for full ER Diagram.
 
+### Data Transformation
+- **Medallion Architecture**: See [data-transformation/README.md](docs/data-transformation/dbt-transformation.md) for the complete transformation architecture.
+- **Layers**:
+  - **Snapshots**: SCD Type 2 change data capture — [snapshots/README.md](docs/data-transformation/snapshots/snapshot.md)
+  - **Staging (Bronze)**: Type casting, light transformation — [staging/README.md](docs/data-transformation/staging/staging.md)
+  - **Intermediate (Silver)**: Business transformation, derived attributes — [intermediate/README.md](docs/data-transformation/intermediate/intermediate.md)
+  - **Analytics (Gold)**: Dim/Fact tables, Star schema — [analytics/README.md](docs/data-transformation/analytics/analytics.md)
+
+### Data Orchestration
+- **Airflow DAGs**: See [airflow/README.md](docs/airflow/README.md) for orchestration documentation.
+- **DAGs**:
+  - `batch_data_ingestion` — Weekly data extraction from Kaggle and loading to Snowflake
+  - `batch_data_transformation` — dbt snapshot and build pipeline (triggered by ingestion)
+  - `capstone_db_connection_test` — Database connection validation (manual)
+
+### Data Analytics & Visualization
+- **Metabase Dashboard**: See [data-analytics-visualization/dashboard/dashboard-overview.md](docs/data-analytics-visualization/dashboard/dashboard-overview.md) for dashboard documentation.
+- **Analysis**: See [data-analytics-visualization/analysis/analysis.md](docs/data-analytics-visualization/analysis/analysis.md) for brief data analytics and insights.
+- **Key Metrics**:
+  - Total orders by year (2016–2018)
+  - Order distribution by product category
+  - Customer review analysis by tier
+  - Average shipping time and review scores
+  - Payment method trends over 12 months
+
 ## Project Setup
 
 ### Prerequisites
