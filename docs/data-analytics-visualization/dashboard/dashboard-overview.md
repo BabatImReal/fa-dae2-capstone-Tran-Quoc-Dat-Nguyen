@@ -58,14 +58,56 @@ The Fact Dashboard provides key business metrics and visualizations for the e-co
 
 ## Data Sources
 
-- **Fact Tables:** `fact_orders`, `fact_payments`, `fact_reviews`
+- **Fact Tables:** `fact_orders`
 - **Dimension Tables:** `dim_product`, `dim_customer`, `dim_date`, `dim_seller`
 
 ## How to Access
 
-1. Open Metabase at [http://localhost:3000](http://localhost:3000).
-2. Navigate to the **Fact Dashboard** collection.
-3. Use filters (if available) to drill down by date, category, or region.
+### Prerequisites
+
+- **Docker** installed and running on your machine.  
+  - [Install Docker Desktop](https://docs.docker.com/get-docker/) (Windows/Mac) or Docker Engine (Linux).
+
+### Steps to Launch Metabase
+
+1. **Start the Metabase stack** using Docker Compose:
+   ```bash
+   docker compose -f docker-compose-metabase.yml up -d
+   ```
+   This will start two containers:
+   - `metabase` — the Metabase application (port 3000)
+   - `metabase_db` — PostgreSQL database for Metabase metadata (port 5434)
+
+2. **Wait for Metabase to initialize** (first run may take 1–2 minutes). You can monitor progress with:
+   ```bash
+   docker compose -f docker-compose-metabase.yml logs -f metabase
+   ```
+   Look for a log message like:
+   ```
+   Metabase Initialization COMPLETE
+   ```
+
+3. **Open the dashboard** in your browser:
+   - Navigate to [http://localhost:3000](http://localhost:3000).
+
+4. **First-time setup** (if prompted):
+   - Create an admin account.
+   - Connect Metabase to your Snowflake data warehouse (or other data source).
+   - Navigate to the **Fact Dashboard** collection.
+
+5. **Use filters** (if available) to drill down by date, category, or region.
+
+### Stopping Metabase
+
+To stop the containers:
+```bash
+docker compose -f docker-compose-metabase.yml down
+```
+
+To stop and remove all data (including Metabase settings):
+```bash
+docker compose -f docker-compose-metabase.yml down -v
+```
 
 ---
 
