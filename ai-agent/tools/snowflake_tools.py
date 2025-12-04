@@ -10,17 +10,29 @@ load_dotenv()
 
 def get_snowflake_connection():
 	# Minimal helper: reads credentials from environment and returns connection
-	return snowflake.connector.connect(
-		account=os.getenv("SNOWFLAKE_ACCOUNT"),
-        user=os.getenv("SNOWFLAKE_USER"),
-        authenticator="SNOWFLAKE_JWT",
-        private_key_file=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH"),
-        private_key_file_pwd=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD"),
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-        database=os.getenv("SNOWFLAKE_DATABASE"),
-        schema=os.getenv("SNOWFLAKE_SCHEMA"),
-        role=os.getenv("SNOWFLAKE_ROLE"),
-	)
+	params = {
+		"account": os.getenv("SNOWFLAKE_ACCOUNT"),
+		"user": os.getenv("SNOWFLAKE_USER"),
+		"authenticator": "SNOWFLAKE_JWT",
+		"private_key_file": os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH"),
+		"private_key_file_pwd": os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD"),
+		"warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+		"database": os.getenv("SNOWFLAKE_DATABASE"),
+		"schema": os.getenv("SNOWFLAKE_SCHEMA"),
+		"role": os.getenv("SNOWFLAKE_ROLE"),
+	}
+	# Debug: print connection params (mask sensitive values)
+	print(f"❄️ Snowflake Connection Params:")
+	print(f"   Account: {params['account']}")
+	print(f"   User: {params['user']}")
+	print(f"   Authenticator: {params['authenticator']}")
+	print(f"   Private Key File: {params['private_key_file']}")
+	print(f"   Private Key Pwd: {'*' * len(params['private_key_file_pwd']) if params['private_key_file_pwd'] else 'None'}")
+	print(f"   Warehouse: {params['warehouse']}")
+	print(f"   Database: {params['database']}")
+	print(f"   Schema: {params['schema']}")
+	print(f"   Role: {params['role']}")
+	return snowflake.connector.connect(**params)
 
 
 
@@ -31,11 +43,11 @@ def validate_identifier(value: str):
     return value
 
 
-@tool("get_all_product_categories",
+@tool("get_all_product_categories_from_snowflake",
       description="Query Snowflake (sc_analytics.dim_products) and return all distinct product categories.")
-def get_all_product_categories() -> Dict[str, Any]:
+def get_all_product_categories_from_snowflake() -> Dict[str, Any]:
     """
-    Return all distinct product categories from sc_analytics.dim_products.
+    Query Snowflake (sc_analytics.dim_products) and return all distinct product categories. Return all distinct product categories from sc_analytics.dim_products.
     """
 
     sql = """
@@ -64,8 +76,9 @@ def get_all_product_categories() -> Dict[str, Any]:
 
 @tool("get_product_by_category",
       description="Query Snowflake product dimension table. Returns one example product for a given product category name. Automatically handles spaces vs underscores in category names.")
-def get_product_by_category(category: str) -> Dict[str, Any]:
+def get_product_by_category_from_snowflake(category: str) -> Dict[str, Any]:
     """
+    Query Snowflake product dimension table. Returns one example product for a given product category name. Automatically handles spaces vs underscores in category names.
     Return 1 product from a specific product_category.
     Returns: product_id, product_category_name_english, 
              product_weight_g, product_length_cm,
@@ -108,74 +121,8 @@ def get_product_by_category(category: str) -> Dict[str, Any]:
     }
 
 
-@tool("get_all_shipping_tiers",
-      description="Query Snowflake (sc_analytics.fact_orders) to return all distinct shipping_tier values.")
-def get_all_shipping_tiers() -> Dict[str, Any]:
-    """
-    Return all distinct shipping_tier values from sc_analytics.fact_orders.
-    """
-
-    sql = """
-        SELECT DISTINCT shipping_tier
-        FROM sc_analytics.fact_orders
-        ORDER BY shipping_tier
-    """.strip()
-
-    conn = get_snowflake_connection()
-    cur = conn.cursor()
-    cur.execute(sql)
-
-    rows = cur.fetchall()
-    columns = [col[0] for col in cur.description]
-
-    cur.close()
-    conn.close()
-
-    return {
-        "sql_used": sql,
-        "row_count": len(rows),
-        "rows": [dict(zip(columns, r)) for r in rows]
-    }
-
-@tool("get_shipping_tier_summary",
-      description="Query Snowflake fact_orders for a specific shipping_tier. Returns order count, total quantity, and average shipping_date.")
-def get_shipping_tier_summary(tier: str) -> Dict[str, Any]:
-    """
-    Return count(order_id) and avg(shipping_date) for a specific shipping_tier.
-    """
-
-    tier_safe = validate_identifier(tier)
-
-    sql = f"""
-        SELECT
-            shipping_tier,
-            COUNT(order_id) AS total_orders,
-            SUM(order_qty) AS total_orders_quantity,
-            AVG(shipping_date) AS avg_shipping_date
-        FROM sc_analytics.fact_orders
-        WHERE shipping_tier = '{tier_safe}'
-        GROUP BY shipping_tier
-    """.strip()
-
-    conn = get_snowflake_connection()
-    cur = conn.cursor()
-    cur.execute(sql)
-
-    rows = cur.fetchall()
-    columns = [col[0] for col in cur.description]
-
-    cur.close()
-    conn.close()
-
-    return {
-        "sql_used": sql,
-        "row_count": len(rows),
-        "rows": [dict(zip(columns, r)) for r in rows]
-    }
-
-
 @tool(
-    "get_order_summary_by_quarter",
+    "get_order_summary_by_quarter_from_snowflake",
     description="Query Snowflake sc_analytics.fact_orders and sc_analytics.dim_date to return order + revenue summary for a given year and quarter.",
     args_schema={
         "type": "object",
@@ -192,9 +139,10 @@ def get_shipping_tier_summary(tier: str) -> Dict[str, Any]:
         "required": ["year", "quarter"]
     }
 )
-
-
-def get_order_summary_by_quarter(year: str, quarter: str) -> Dict[str, Any]:
+def get_order_summary_by_quarter_from_snowflake(year: str, quarter: str) -> Dict[str, Any]:
+    """
+    Query Snowflake sc_analytics.fact_orders and sc_analytics.dim_date to return order + revenue summary for a given year and quarter.
+    """
     year_safe = validate_identifier(year)
     quarter_safe = validate_identifier(quarter)
 
@@ -232,3 +180,5 @@ def get_order_summary_by_quarter(year: str, quarter: str) -> Dict[str, Any]:
         "row_count": len(rows),
         "rows": [dict(zip(columns, r)) for r in rows]
     }
+
+

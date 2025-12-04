@@ -13,22 +13,23 @@ def get_connection():
         "host": os.getenv("POSTGRES_HOST"),
         "port": os.getenv("POSTGRES_PORT"),
         "dbname": os.getenv("POSTGRES_DB"),
-        "user": os.getenv("POSTGRES_USER"   ),
+        "user": os.getenv("POSTGRES_USER"),
         "password": os.getenv("POSTGRES_PASSWORD"),
+        "connect_timeout": 10,  # 10 second timeout
     }
+    # Debug: print connection params (mask password)
+    print(f"🔌 PostgreSQL Connection Params:")
+    print(f"   Host: {params['host']}")
+    print(f"   Port: {params['port']}")
+    print(f"   Database: {params['dbname']}")
+    print(f"   User: {params['user']}")
+    print(f"   Password: {'*' * len(params['password']) if params['password'] else 'None'}")
     return psycopg.connect(**params)
 
-@tool(
-    "get_latest_product_summary",
-    description="Return the latest ingested product event from PostgreSQL.",
-    args_schema={   # <-- REQUIRED JSON schema for tools
-        "type": "object",
-        "properties": {},   # No parameters required
-        "required": []
-    }
-)
-def get_latest_product_summary() -> Dict[str, Any]:
+@tool
+def get_latest_product_summary_from_postgre() -> Dict[str, Any]:
     """
+    Return the latest ingested product event from PostgreSQL.
     Query the most recent product event from staging.user_events.
     Returns: product_name, category, price, quantity.
     """
