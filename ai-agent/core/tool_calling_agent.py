@@ -25,15 +25,60 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.snowflake_tools import (
-    get_all_product_categories,
-    get_product_by_category, 
-    get_all_shipping_tiers, 
-    get_shipping_tier_summary, 
-    get_order_summary_by_quarter
+    get_all_product_categories_from_snowflake,
+    get_product_by_category_from_snowflake, 
+    get_order_summary_by_quarter_from_snowflake,
+)
+
+from tools.postgre_tools import (
+    get_latest_product_summary_from_postgre
 )
 
 # Load environment variables
 load_dotenv()
+
+import json
+
+def print_state(state: MessagesState, step_name: str):
+    """Pretty print the current state for debugging purposes"""
+    print(f"\n{'='*50}")
+    print(f"Step: {step_name}")
+    print("Current State:")
+    # Convert messages to a serializable format
+    serializable_messages = []
+    for msg in state["messages"]:
+        try:
+            msg_data = {
+                "type": type(msg).__name__,
+                "content": str(msg.content)[:500] if hasattr(msg, 'content') else str(msg)[:500]
+            }
+            # Add tool calls if present
+            if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                msg_data["tool_calls"] = []
+                for tc in msg.tool_calls:
+                    tool_call_data = {
+                        "name": str(tc.get("name", "unknown")),
+                        "args": {k: str(v) for k, v in tc.get("args", {}).items()}
+                    }
+                    msg_data["tool_calls"].append(tool_call_data)
+            serializable_messages.append(msg_data)
+        except Exception as e:
+            serializable_messages.append({
+                "type": type(msg).__name__,
+                "error": f"Could not serialize: {str(e)}"
+            })
+    
+    serializable_state = {
+        "messages": serializable_messages,
+        "message_count": len(state["messages"])
+    }
+    try:
+        print(json.dumps(serializable_state, indent=2, default=str))
+    except Exception as e:
+        print(f"Error printing state: {e}")
+        print(f"Message count: {len(state['messages'])}")
+    print(f"{'='*50}\n")
+
 
 def create_tool_calling_agent():
     """Create a tool-calling agent using LangGraph StateGraph"""
@@ -45,7 +90,10 @@ def create_tool_calling_agent():
     )
 
     # Create tool registry
-    tools = [get_all_product_categories, get_product_by_category, get_all_shipping_tiers, get_shipping_tier_summary, get_order_summary_by_quarter]
+    tools = [get_all_product_categories_from_snowflake, 
+             get_product_by_category_from_snowflake, 
+             get_order_summary_by_quarter_from_snowflake,
+             get_latest_product_summary_from_postgre]
     tools_by_name = {tool.name: tool for tool in tools}
 
     # Augment the LLM with tools
@@ -54,6 +102,7 @@ def create_tool_calling_agent():
     # Define the agent nodes
     def llm_call(state: MessagesState):
         """LLM decides whether to call a tool or not"""
+        print_state(state, "Before LLM Call")
         return {
             "messages": [
                 llm_with_tools.invoke(
@@ -62,20 +111,18 @@ def create_tool_calling_agent():
                             content="""You are a helpful data analyst assistant. You have access to the following tools:
 
 Available tools:
-- get_product_by_category: Retrieve 1 product from a given product category
-- get_all_shipping_tiers: List all available shipping tiers
-- get_shipping_tier_summary: Get a summary of a specific shipping tier
-- get_order_summary_by_quarter: Get order summary statistics for a specific year and quarter
+- get_all_product_categories_from_snowflake: Get all unique product categories from Snowflake
+- get_product_by_category_from_snowflake: Retrieve 1 product from a given product category
+- get_order_summary_by_quarter_from_snowflake: Get order summary statistics for a specific year and quarter
+- get_latest_product_summary_from_postgre: Get the latest ingested product event from PostgreSQL
 
 Always use the appropriate tool when the user asks about:
-- User details, customer information, or user profiles
-- Transactions, payment history, or financial data
-- Company policies, procedures, guidelines, or documentation
-- Product information or categories
-- Shipping tiers and summaries
-- Quarterly order statistics
+- Product categories → use get_all_product_categories_from_snowflake
+- Product information by category → use get_product_by_category_from_snowflake
+- Quarterly order statistics → use get_order_summary_by_quarter_from_snowflake
+- Latest product or recent ingestion → use get_latest_product_summary_from_postgre
 
-Be professional, friendly, and helpful. Provide clear and accurate responses based on the tool results. Reference previous conversations if relevant. Only use a tool when it is necessary to answer the user’s question."""
+Be professional, friendly, and helpful. Provide clear and accurate responses based on the tool results."""
                         )
                     ]
                     + state["messages"]
@@ -85,6 +132,7 @@ Be professional, friendly, and helpful. Provide clear and accurate responses bas
 
     def tool_node(state: dict):
         """Performs the tool call"""
+        print_state(state, "Before Tool Execution")
         result = []
         for tool_call in state["messages"][-1].tool_calls:
             tool = tools_by_name[tool_call["name"]]
