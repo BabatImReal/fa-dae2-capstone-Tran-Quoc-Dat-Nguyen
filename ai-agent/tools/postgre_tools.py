@@ -1,10 +1,26 @@
 import os
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 from dotenv import load_dotenv
 import psycopg
 from langchain.tools import tool
 
 load_dotenv()
+
+
+def tool_with_docs(func):
+    """Decorator that loads tool description from markdown file based on function name.
+
+    Args:
+        func: The function to decorate as a LangChain tool.
+
+    Returns:
+        A decorated function with tool name and description loaded from markdown.
+    """
+    tool_docs_dir = Path(__file__).parent / "tool_docs"
+    md_path = tool_docs_dir / f"{func.__name__}.md"
+    description = md_path.read_text().strip()
+    return tool(func.__name__, description=description)(func)
 
 # Get a PostgreSQL database connection using environment variables
 def get_connection():
@@ -26,14 +42,8 @@ def get_connection():
     print(f"   Password: {'*' * len(params['password']) if params['password'] else 'None'}")
     return psycopg.connect(**params)
 
-@tool
+@tool_with_docs
 def get_latest_product_summary_from_postgre() -> Dict[str, Any]:
-    """
-    Return the latest ingested product event from PostgreSQL.
-    Query the most recent product event from staging.user_events.
-    Returns: product_name, category, price, quantity.
-    """
-
     sql = """
         SELECT
             product_name,

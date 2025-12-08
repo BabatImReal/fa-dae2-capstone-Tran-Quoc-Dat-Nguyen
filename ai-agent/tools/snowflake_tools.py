@@ -1,12 +1,28 @@
 from typing import Dict, Any, List, Optional
 import os
 import re
+from pathlib import Path
 import snowflake.connector 
 from langchain.tools import tool
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+
+def tool_with_docs(func):
+    """Decorator that loads tool description from markdown file based on function name.
+
+    Args:
+        func: The function to decorate as a LangChain tool.
+
+    Returns:
+        A decorated function with tool name and description loaded from markdown.
+    """
+    tool_docs_dir = Path(__file__).parent / "tool_docs"
+    md_path = tool_docs_dir / f"{func.__name__}.md"
+    description = md_path.read_text().strip()
+    return tool(func.__name__, description=description)(func)
 
 def get_snowflake_connection():
 	# Minimal helper: reads credentials from environment and returns connection
@@ -43,13 +59,8 @@ def validate_identifier(value: str):
     return value
 
 
-@tool("get_all_product_categories_from_snowflake",
-      description="Query Snowflake (sc_analytics.dim_products) and return all distinct product categories.")
+@tool_with_docs
 def get_all_product_categories_from_snowflake() -> Dict[str, Any]:
-    """
-    Query Snowflake (sc_analytics.dim_products) and return all distinct product categories. Return all distinct product categories from sc_analytics.dim_products.
-    """
-
     sql = """
         SELECT DISTINCT product_category_name_english
         FROM sc_analytics.dim_products
@@ -74,17 +85,8 @@ def get_all_product_categories_from_snowflake() -> Dict[str, Any]:
     }
 
 
-@tool("get_product_by_category",
-      description="Query Snowflake product dimension table. Returns one example product for a given product category name. Automatically handles spaces vs underscores in category names.")
+@tool_with_docs
 def get_product_by_category_from_snowflake(category: str) -> Dict[str, Any]:
-    """
-    Query Snowflake product dimension table. Returns one example product for a given product category name. Automatically handles spaces vs underscores in category names.
-    Return 1 product from a specific product_category.
-    Returns: product_id, product_category_name_english, 
-             product_weight_g, product_length_cm,
-             product_height_cm, product_width_cm
-    """
-
     # Convert spaces → underscores to match Snowflake naming
     category_normalized = category.replace(" ", "_")
 
@@ -121,28 +123,8 @@ def get_product_by_category_from_snowflake(category: str) -> Dict[str, Any]:
     }
 
 
-@tool(
-    "get_order_summary_by_quarter_from_snowflake",
-    description="Query Snowflake sc_analytics.fact_orders and sc_analytics.dim_date to return order + revenue summary for a given year and quarter.",
-    args_schema={
-        "type": "object",
-        "properties": {
-            "year": {
-                "type": "string",
-                "description": "Year to query, e.g. '2017'"
-            },
-            "quarter": {
-                "type": "string",
-                "description": "Quarter number: '1', '2', '3', or '4'"
-            }
-        },
-        "required": ["year", "quarter"]
-    }
-)
+@tool_with_docs
 def get_order_summary_by_quarter_from_snowflake(year: str, quarter: str) -> Dict[str, Any]:
-    """
-    Query Snowflake sc_analytics.fact_orders and sc_analytics.dim_date to return order + revenue summary for a given year and quarter.
-    """
     year_safe = validate_identifier(year)
     quarter_safe = validate_identifier(quarter)
 
