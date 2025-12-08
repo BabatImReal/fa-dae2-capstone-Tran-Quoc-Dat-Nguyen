@@ -87,6 +87,15 @@ def get_all_product_categories_from_snowflake() -> Dict[str, Any]:
 
 @tool_with_docs
 def get_product_by_category_from_snowflake(category: str) -> Dict[str, Any]:
+    """Query Snowflake product dimension table and return one example product.
+    
+    Args:
+        category: The product category name (e.g., 'health_beauty' or 'health beauty').
+                  Spaces and underscores are handled automatically.
+    
+    Returns:
+        Dict containing sql_used, row_count, and row with product details.
+    """
     # Convert spaces → underscores to match Snowflake naming
     category_normalized = category.replace(" ", "_")
 
@@ -125,6 +134,15 @@ def get_product_by_category_from_snowflake(category: str) -> Dict[str, Any]:
 
 @tool_with_docs
 def get_order_summary_by_quarter_from_snowflake(year: str, quarter: str) -> Dict[str, Any]:
+    """Query Snowflake and return order and revenue summary for a given year and quarter.
+    
+    Args:
+        year: Year to query (e.g., '2017', '2018').
+        quarter: Quarter number ('1', '2', '3', or '4').
+    
+    Returns:
+        Dict containing sql_used, row_count, and rows with order summary statistics.
+    """
     year_safe = validate_identifier(year)
     quarter_safe = validate_identifier(quarter)
 
