@@ -33,9 +33,9 @@ def cli_interface_with_tools():
     print("=" * 60)
     print("This agent can:")
     print("  • Retrieve a product from a specific category")
-    print("  • List all available shipping tiers")
-    print("  • Get summary statistics for a specific shipping tier")
     print("  • Get order summary for a specific year and quarter")
+    print("  • Get latest product information from PostgreSQL")
+    print("  • Search capstone documents using semantic similarity")
     print("  • Use multiple tools in sequence for complex queries")
     print("")
     print("Commands:")
@@ -88,17 +88,20 @@ def show_help():
     print("\n🛠️ Available Tools:")
     print("-" * 60)
 
-    print("📊 Analytics & Product Tools:")
+    print("📊 Database & Product Tools:")
     print("  • get_product_by_category(category) - Retrieve 1 product from a given product category")
-    print("  • get_all_shipping_tiers()         - List all available shipping tiers")
-    print("  • get_shipping_tier_summary(tier) - Get summary for a specific shipping tier")
     print("  • get_order_summary_by_quarter(year, quarter) - Get order summary for a specific year & quarter")
+    print("  • get_latest_product_summary_from_postgre() - Get the latest ingested product event")
+    print("")
+
+    print("📚 Document & Knowledge Tools:")
+    print("  • search_documents(query) - Search capstone documents using semantic similarity")
     print("")
 
     print("📋 Tool Capabilities:")
     print("  • Product Search: Returns one product per category")
-    print("  • Shipping Tier: List and summarize shipping tiers")
-    print("  • Order Summary: Returns aggregated order stats per quarter")
+    print("  • Order Analytics: Returns aggregated order stats per quarter")
+    print("  • Document Search: Uses semantic similarity to find relevant information")
     print("-" * 60)
 
 
@@ -107,16 +110,21 @@ def show_examples():
     print("\n💡 Example Queries:")
     print("-" * 60)
 
-    print("📦 Product & Shipping Examples:")
+    print("📦 Product & Order Examples:")
     print("  • 'Get a product from the electronics category'")
-    print("  • 'Show all available shipping tiers'")
-    print("  • 'Give me the summary for shipping tier Excellent'")
     print("  • 'Show order summary for Q4 2023'")
+    print("  • 'What is the latest product information?'")
+    print("")
+
+    print("📚 Document Search Examples:")
+    print("  • 'Search for information about data engineering'")
+    print("  • 'Find information about machine learning in the documents'")
+    print("  • 'What does the document say about architecture?'")
     print("")
 
     print("🔄 Combined Queries:")
-    print("  • 'Get a product from the electronics category and show its shipping tier summary'")
-    print("  • 'Show order summary for Q4 2023 and list all shipping tiers'")
+    print("  • 'Get a product from electronics and search documents for related topics'")
+    print("  • 'Show order summary for Q4 2023 and search for quarterly trends'")
     print("-" * 60)
 
 
