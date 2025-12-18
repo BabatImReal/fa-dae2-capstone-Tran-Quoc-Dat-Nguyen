@@ -1,20 +1,8 @@
-#!/usr/bin/env python3
-"""
-M04W03L02 Lab: Embed and Store Chunks in Pinecone
-
-This script demonstrates how to:
-1. Load chunked documents from the text chunking lab
-2. Generate embeddings using OpenAI
-3. Store embeddings in Pinecone vector database
-4. Test similarity search functionality
-
-Following the RAG architecture pattern from M04W03L02__rag_architecture.md
-"""
-
 import json
 import os
 import sys
 from typing import Any
+from pathlib import Path
 
 import click
 from dotenv import load_dotenv
@@ -31,7 +19,7 @@ class PineconeEmbedder:
 
     def __init__(self, index_name: str = None):
         """Initialize the Pinecone embedder."""
-        self.index_name = index_name or os.getenv("PINECONE_INDEX_NAME", "fa-dae2-capstone")
+        self.index_name = index_name or os.getenv("PINECONE_DENSE_INDEX_NAME")
         self.pc = None
         self.index = None
         self._initialize()
@@ -42,8 +30,18 @@ class PineconeEmbedder:
         api_key = os.getenv("PINECONE_API_KEY")
         if not api_key:
             raise ValueError("PINECONE_API_KEY environment variable is required")
-
-        self.pc = Pinecone(api_key=api_key)
+        # Allow specifying the Pinecone environment (region) via env var
+        environment = os.getenv("PINECONE_ENV")
+        try:
+            if environment:
+                self.pc = Pinecone(api_key=api_key, environment=environment)
+                print(f"✅ Initialized Pinecone client with environment: {environment}")
+            else:
+                self.pc = Pinecone(api_key=api_key)
+                print("✅ Initialized Pinecone client without explicit environment")
+        except TypeError:
+            # Fallback if Pinecone client doesn't accept 'environment' kwarg
+            self.pc = Pinecone(api_key=api_key)
 
         # Connect to index
         try:
@@ -56,20 +54,33 @@ class PineconeEmbedder:
 
     def embed_chunks(self, chunks: list[dict[str, Any]]) -> list[list[float]]:
         """Generate embeddings for document chunks using Pinecone's built-in embedding."""
-        print(f"🧠 Generating embeddings for {len(chunks)} chunks...")
+        total = len(chunks)
+        print(f"🧠 Generating embeddings for {total} chunks...")
 
         # Extract text from chunks
-        texts = [chunk["text"] for chunk in chunks]
+        texts = [chunk.get("text", "") for chunk in chunks]
 
-        # Use Pinecone's built-in embedding (llama-text-embed-v2)
+        # Pinecone inference API limits inputs per call (typically 96)
+        batch_size = int(os.getenv("PINECONE_EMBED_BATCH_SIZE", "96"))
+        batch_size = max(1, min(batch_size, 96))
+
+        embeddings: list[list[float]] = []
         try:
-            response = self.pc.inference.embed(
-                model="llama-text-embed-v2",
-                inputs=texts,
-                parameters={"input_type": "passage", "truncate": "END"},
-            )
+            for start in range(0, total, batch_size):
+                end = min(start + batch_size, total)
+                batch = texts[start:end]
+                response = self.pc.inference.embed(
+                    model="llama-text-embed-v2",
+                    inputs=batch,
+                    parameters={"input_type": "passage", "truncate": "END"},
+                )
+                batch_embeddings = [item.values for item in response.data]
+                embeddings.extend(batch_embeddings)
+                print(f"   ✅ Embedded {end}/{total}")
 
-            embeddings = [item.values for item in response.data]
+            if not embeddings:
+                raise RuntimeError("No embeddings returned from Pinecone")
+
             print(f"✅ Generated {len(embeddings)} embeddings with {len(embeddings[0])} dimensions")
             return embeddings
 
@@ -86,15 +97,19 @@ class PineconeEmbedder:
         """Store chunks and embeddings in Pinecone."""
         print(f"📦 Storing {len(chunks)} chunks in Pinecone...")
 
-        # Prepare vectors for upsert
+        # Prepare vectors for upsert. Use chunk['id'] when available.
         vectors = []
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False)):
+            # determine vector id: prefer explicit chunk id, else fallback to deterministic id
+            fallback_id = f"chunk_{i}_{chunk.get('metadata', {}).get('source', 'unknown')}"
+            vec_id = str(chunk.get("id", fallback_id))
+
             vector = {
-                "id": f"chunk_{i}_{chunk['metadata'].get('source', 'unknown')}",
+                "id": vec_id,
                 "values": embedding,  # Use the actual embedding values
                 "metadata": {
-                    **chunk["metadata"],
-                    "text": chunk["text"][:1000],  # Limit text length for metadata
+                    **(chunk.get("metadata") or {}),
+                    "text": (chunk.get("text") or "")[:1000],  # Limit text length for metadata
                 },
             }
             vectors.append(vector)
@@ -164,10 +179,23 @@ class PineconeEmbedder:
 def load_chunks_from_file(file_path: str) -> list[dict[str, Any]]:
     """Load chunks from a JSON file created by the chunking lab."""
     try:
+        # Defensive: if caller accidentally passed a directory, skip with a clear message
+        if os.path.isdir(file_path):
+            print(f"⚠️  Skipping directory when expecting a chunk file: {file_path}")
+            return []
         with open(file_path, encoding="utf-8") as f:
-            chunks = json.load(f)
-        print(f"✅ Loaded {len(chunks)} chunks from {file_path}")
-        return chunks
+            obj = json.load(f)
+
+        # Accept either a list of chunks or a single chunk object
+        if isinstance(obj, list):
+            print(f"✅ Loaded {len(obj)} chunks from {file_path}")
+            return obj
+        if isinstance(obj, dict):
+            print(f"✅ Loaded 1 chunk from {file_path}")
+            return [obj]
+
+        print(f"⚠️  Unexpected JSON format in {file_path}")
+        return []
     except Exception as e:
         print(f"❌ Failed to load chunks from {file_path}: {e}")
         return []
@@ -192,10 +220,16 @@ def display_search_results(results: list[dict[str, Any]], query: str):
 
 @click.command()
 @click.option(
-    "--chunks-file",
+    "--chunks-path",
     "-f",
-    default="chunking_output/sentence_chunks.json",
-    help="Path to the chunks JSON file from chunking lab",
+    default="data/chunks",
+    help="Path to the chunks JSON file or a directory containing chunk JSON files (default: data/chunks)",
+)
+@click.option(
+    "--manifest",
+    "-m",
+    default="data/process_json/last_processed_chunks.json",
+    help="Optional manifest file (JSON list) containing chunk file paths to embed (default: data/process_json/last_processed_chunks.json)",
 )
 @click.option(
     "--index-name",
@@ -212,12 +246,21 @@ def display_search_results(results: list[dict[str, Any]], query: str):
     help="Test queries for similarity search",
 )
 @click.option("--top-k", "-k", default=3, help="Number of top results to return for each query")
+@click.option(
+    "--max-files",
+    "-mf",
+    default=0,
+    type=int,
+    help="Maximum number of latest chunk files to embed from a directory (0 => all, default: 0)",
+)
 def main(
-    chunks_file: str,
+    chunks_path: str,
+    manifest: str,
     index_name: str,
     namespace: str,
     test_queries: list[str],
     top_k: int,
+    max_files: int,
 ):
     """Embed chunks and store them in Pinecone for RAG systems."""
 
@@ -225,10 +268,10 @@ def main(
     print("M04W03L02 Lab: Embed and Store Chunks in Pinecone")
     print("=" * 60)
 
-    # Check if chunks file exists
-    if not os.path.exists(chunks_file):
-        print(f"❌ Chunks file not found: {chunks_file}")
-        print("Run the text chunking lab first to generate chunks.")
+    # Check if chunks path exists
+    if not os.path.exists(chunks_path):
+        print(f"❌ Chunks path not found: {chunks_path}")
+        print("Run the text chunking lab first to generate chunks in data/chunks.")
         return
 
     try:
@@ -236,9 +279,85 @@ def main(
         print("\n🔧 Initializing Pinecone embedder...")
         embedder = PineconeEmbedder(index_name=index_name)
 
+        # Inspect index stats to decide upload behavior
+        stats = embedder.get_index_stats()
+        existing_vector_count = 0
+        if stats and isinstance(stats, dict):
+            existing_vector_count = int(stats.get("total_vector_count", 0) or 0)
+
         # Load chunks
-        print(f"\n📄 Loading chunks from {chunks_file}...")
-        chunks = load_chunks_from_file(chunks_file)
+        chunks = []
+
+        # If a manifest is provided and exists, honor it and load only those files
+        manifest_used = False
+        if manifest and os.path.exists(manifest):
+            try:
+                manifest_list = json.loads(open(manifest, encoding="utf-8").read())
+                if isinstance(manifest_list, list) and manifest_list:
+                    print(f"📋 Loaded manifest with {len(manifest_list)} entries: {manifest}")
+                    for entry in manifest_list:
+                        # resolve possible relative paths
+                        cand = entry
+                        if not os.path.exists(cand):
+                            # try relative to chunks_path
+                            cand = os.path.join(chunks_path, os.path.basename(entry))
+                        if not os.path.exists(cand):
+                            print(f"⚠️  Manifest entry not found, skipping: {entry}")
+                            continue
+                        loaded = load_chunks_from_file(cand)
+                        if loaded:
+                            chunks.extend(loaded)
+                    manifest_used = True
+            except Exception as e:
+                print(f"⚠️ Failed to read manifest {manifest}: {e}")
+
+        # If manifest was used we already loaded desired files. Otherwise
+        # inspect the `chunks_path` (it may be a directory of chunk files or a single file).
+        if not manifest_used:
+            if os.path.isdir(chunks_path):
+                print(f"\n📁 Inspecting chunk files in directory: {chunks_path}...")
+                # collect json files with mtimes
+                candidates = []
+                for p in os.listdir(chunks_path):
+                    if p.lower().endswith('.json'):
+                        fullp = os.path.join(chunks_path, p)
+                        try:
+                            mtime = os.path.getmtime(fullp)
+                        except Exception:
+                            mtime = 0
+                        candidates.append((p, mtime))
+
+                if not candidates:
+                    print(f"❌ No JSON chunk files found in directory: {chunks_path}")
+                    return
+
+                # sort by modification time (latest first)
+                candidates.sort(key=lambda x: x[1], reverse=True)
+
+                # Decide which files to upload:
+                # - If the Pinecone index is empty -> upload ALL chunk files
+                # - Otherwise upload only the latest `max_files` (or all if max_files==0)
+                if existing_vector_count == 0:
+                    # index empty: upload all
+                    selected = candidates
+                    print("📌 Pinecone index empty — will upload all chunk files.")
+                else:
+                    if max_files and max_files > 0:
+                        selected = candidates[:max_files]
+                    else:
+                        selected = candidates
+                    print(f"📌 Pinecone already has {existing_vector_count} vectors — uploading latest {len(selected)} file(s).")
+
+                selected_files = [name for name, _ in selected]
+
+                for jf in selected_files:
+                    full = os.path.join(chunks_path, jf)
+                    loaded = load_chunks_from_file(full)
+                    if loaded:
+                        chunks.extend(loaded)
+            else:
+                print(f"\n📄 Loading chunks from file: {chunks_path}...")
+                chunks = load_chunks_from_file(chunks_path)
 
         if not chunks:
             print("❌ No chunks found. Run the chunking lab first.")
@@ -265,6 +384,7 @@ def main(
         for query in test_queries:
             results = embedder.search_similar(query, top_k=top_k, namespace=namespace)
             display_search_results(results, query)
+
 
         print("\n✅ Lab completed successfully!")
         print(f"🎯 Chunks stored in namespace: {namespace}")
