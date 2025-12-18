@@ -34,6 +34,10 @@ from tools.postgre_tools import (
     get_latest_product_summary_from_postgre
 )
 
+from tools.rag_tools import (
+    search_documents
+)
+
 # Load environment variables
 load_dotenv()
 
@@ -93,7 +97,8 @@ def create_tool_calling_agent():
     tools = [get_all_product_categories_from_snowflake, 
              get_product_by_category_from_snowflake, 
              get_order_summary_by_quarter_from_snowflake,
-             get_latest_product_summary_from_postgre]
+             get_latest_product_summary_from_postgre,
+             search_documents]
     tools_by_name = {tool.name: tool for tool in tools}
 
     # Augment the LLM with tools
@@ -115,12 +120,14 @@ Available tools:
 - get_product_by_category_from_snowflake: Retrieve 1 product from a given product category
 - get_order_summary_by_quarter_from_snowflake: Get order summary statistics for a specific year and quarter
 - get_latest_product_summary_from_postgre: Get the latest ingested product event from PostgreSQL
+- search_documents: Search for information in capstone documents using semantic similarity
 
 Always use the appropriate tool when the user asks about:
 - Product categories → use get_all_product_categories_from_snowflake
 - Product information by category → use get_product_by_category_from_snowflake
 - Quarterly order statistics → use get_order_summary_by_quarter_from_snowflake
 - Latest product or recent ingestion → use get_latest_product_summary_from_postgre
+- Document search or information retrieval → use search_documents
 
 Be professional, friendly, and helpful. Provide clear and accurate responses based on the tool results."""
                         )

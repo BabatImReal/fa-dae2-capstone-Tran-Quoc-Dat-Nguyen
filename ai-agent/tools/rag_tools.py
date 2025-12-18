@@ -65,7 +65,7 @@ def search_documents(query: str) -> dict[str, Any]:
             "total_results": len(results.matches),
             "results": formatted_results,
             "search_method": "semantic_similarity",
-            "index_name": os.getenv("PINECONE_INDEX_NAME", "fa-dae2-capstone"),
+            "index_name": os.getenv("PINECONE_DENSE_INDEX_NAME"),
         }
 
     except Exception as e:
