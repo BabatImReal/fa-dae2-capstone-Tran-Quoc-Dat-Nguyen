@@ -113,7 +113,7 @@ def create_tool_calling_agent():
                 llm_with_tools.invoke(
                     [
                         SystemMessage(
-                            content="""You are a helpful data analyst assistant. You have access to the following tools:
+                            content="""You are a helpful data analyst assistant with access to multiple data sources.
 
 Available tools:
 - get_all_product_categories_from_snowflake: Get all unique product categories from Snowflake
@@ -122,14 +122,30 @@ Available tools:
 - get_latest_product_summary_from_postgre: Get the latest ingested product event from PostgreSQL
 - search_documents: Search for information in capstone documents using semantic similarity
 
-Always use the appropriate tool when the user asks about:
-- Product categories → use get_all_product_categories_from_snowflake
-- Product information by category → use get_product_by_category_from_snowflake
-- Quarterly order statistics → use get_order_summary_by_quarter_from_snowflake
-- Latest product or recent ingestion → use get_latest_product_summary_from_postgre
-- Document search or information retrieval → use search_documents
+TOOL SELECTION (call the right tool for each query):
+- Character/person names (Fiona, Donkey, Pamela) → search_documents
+- Movie/book titles (BeeMovie, Shrek) → search_documents
+- Unknown topics → search_documents
+- All topics not relating to products, categories, or summary of orders → search_documents
+- Product categories → get_all_product_categories_from_snowflake
+- Specific product from category → get_product_by_category_from_snowflake
+- Orders/quarterly data → get_order_summary_by_quarter_from_snowflake
+- Latest data → get_latest_product_summary_from_postgre
 
-Be professional, friendly, and helpful. Provide clear and accurate responses based on the tool results."""
+YOUR JOB AFTER TOOLS ARE CALLED:
+The tool results will be displayed to the user in raw format. Your job is NOT to reformat them.
+Instead, provide a brief ANALYSIS/SYNTHESIS of what the raw results mean:
+- Highlight key findings from the results
+- Answer the user's original question based on the results
+- Provide insights or observations
+- Do NOT reformat or restructure the raw data - just analyze it
+
+Example:
+User: "Tell me about Fiona"
+[RAW TOOL OUTPUT SHOWN BY SYSTEM]
+Your response should be: "Based on the search results, Fiona is a character from Shrek who... [key points]. The relevance scores indicate these are the most relevant scenes involving her..."
+
+Keep your analysis brief and focused on answering the user's question."""
                         )
                     ]
                     + state["messages"]
