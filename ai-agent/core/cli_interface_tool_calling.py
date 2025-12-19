@@ -131,20 +131,60 @@ def show_examples():
 
 
 def display_conversation_flow(result: Dict[str, Any]):
-    """Display the conversation flow showing tool usage"""
+    """Display the conversation flow showing tool usage and results"""
+    import json
+    
     messages = result["messages"]
 
     # Show the conversation flow
     for i, message in enumerate(messages):
+        # Show tool calls and capture which ones we made
         if hasattr(message, "tool_calls") and message.tool_calls:
-            # Show tool calls
             for tool_call in message.tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
                 args_str = ", ".join(f"{k}={v}" for k, v in tool_args.items())
                 print(f"\n🔧 Using {tool_name}({args_str})")
-        elif hasattr(message, "content") and message.content:
-            # Show the final response
+        
+        # Show tool results (ToolMessage responses)
+        elif message.__class__.__name__ == "ToolMessage":
+            tool_call_id = getattr(message, "tool_call_id", "unknown")
+            content = message.content
+            
+            try:
+                # Try to parse as JSON for pretty printing
+                if isinstance(content, str):
+                    result_data = json.loads(content)
+                    # Pretty print tool result
+                    if isinstance(result_data, dict):
+                        print(f"\n📊 Tool Result:")
+                        if "error" in result_data:
+                            print(f"   ❌ Error: {result_data.get('error')}")
+                        else:
+                            # Format based on tool type
+                            for key, value in result_data.items():
+                                if key == "results" and isinstance(value, list):
+                                    print(f"   {key}: {len(value)} result(s)")
+                                    for j, res in enumerate(value[:3], 1):  # Show first 3
+                                        if isinstance(res, dict):
+                                            print(f"     [{j}] {res.get('content', str(res)[:100])}")
+                                elif key not in ["query", "search_method", "index_name"]:
+                                    print(f"   {key}: {str(value)[:100]}")
+                    else:
+                        print(f"\n📊 Result: {str(result_data)[:200]}")
+                else:
+                    print(f"\n📊 Result: {str(content)[:200]}")
+            except (json.JSONDecodeError, TypeError):
+                # Fall back to raw display
+                content_str = str(content)
+                if len(content_str) > 500:
+                    print(f"\n📊 Tool Result: {content_str[:500]}...")
+                else:
+                    print(f"\n📊 Tool Result: {content_str}")
+        
+        # Show final LLM response
+        elif hasattr(message, "content") and message.content and message.__class__.__name__ == "AIMessage":
+            print(f"\n🤖 Agent Response:")
             print(message.content)
 
     # Show tool usage summary
