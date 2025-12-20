@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import re
 from typing import Any
 from pathlib import Path
 
@@ -20,8 +21,12 @@ class PineconeEmbedder:
     def __init__(self, index_name: str = None):
         """Initialize the Pinecone embedder."""
         self.index_name = index_name or os.getenv("PINECONE_DENSE_INDEX_NAME")
+        self.sparse_index_name = os.getenv("PINECONE_SPARSE_INDEX_NAME")
         self.pc = None
         self.index = None
+        self.sparse_index = None
+        self.vocab = {}
+        self.next_idx = 0
         self._initialize()
 
     def _initialize(self):
@@ -35,27 +40,68 @@ class PineconeEmbedder:
         try:
             if environment:
                 self.pc = Pinecone(api_key=api_key, environment=environment)
-                print(f"✅ Initialized Pinecone client with environment: {environment}")
+                print(f" Initialized Pinecone client with environment: {environment}")
             else:
                 self.pc = Pinecone(api_key=api_key)
-                print("✅ Initialized Pinecone client without explicit environment")
+                print(" Initialized Pinecone client without explicit environment")
         except TypeError:
             # Fallback if Pinecone client doesn't accept 'environment' kwarg
             self.pc = Pinecone(api_key=api_key)
 
-        # Connect to index
+        # Connect to dense index
         try:
             self.index = self.pc.Index(self.index_name)
-            print(f"✅ Connected to Pinecone index: {self.index_name}")
+            print(f" Connected to Pinecone dense index: {self.index_name}")
         except Exception as e:
-            print(f"❌ Failed to connect to index {self.index_name}: {e}")
+            print(f" Failed to connect to dense index {self.index_name}: {e}")
             print("Make sure the index exists and you have access to it")
             raise
+
+        # Connect to sparse index if configured
+        if self.sparse_index_name:
+            try:
+                self.sparse_index = self.pc.Index(self.sparse_index_name)
+                print(f" Connected to Pinecone sparse index: {self.sparse_index_name}")
+            except Exception as e:
+                print(f"  Could not connect to sparse index {self.sparse_index_name}: {e}")
+                self.sparse_index = None
+
+    def create_bm25_sparse_embedding(self, text: str) -> dict[str, Any]:
+        """Create sparse embedding from text using keyword extraction."""
+        try:
+            words = re.findall(r'\b[a-z]{3,}\b', text.lower())
+            stop_words = {
+                'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+                'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
+                'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can',
+                'that', 'this', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they'
+            }
+            keywords = [w for w in set(words) if w not in stop_words]
+            keywords = sorted(keywords)[:50]
+            
+            if not keywords:
+                keywords = ['text']
+            
+            indices = []
+            values = []
+            
+            for keyword in keywords:
+                if keyword not in self.vocab:
+                    self.vocab[keyword] = self.next_idx
+                    self.next_idx += 1
+                idx = self.vocab[keyword]
+                indices.append(idx)
+                values.append(1.0)
+            
+            return {"indices": indices, "values": values}
+        except Exception as e:
+            print(f"  Error creating sparse embedding: {e}")
+            return {"indices": [0], "values": [1.0]}
 
     def embed_chunks(self, chunks: list[dict[str, Any]]) -> list[list[float]]:
         """Generate embeddings for document chunks using Pinecone's built-in embedding."""
         total = len(chunks)
-        print(f"🧠 Generating embeddings for {total} chunks...")
+        print(f" Generating embeddings for {total} chunks...")
 
         # Extract text from chunks
         texts = [chunk.get("text", "") for chunk in chunks]
@@ -76,16 +122,16 @@ class PineconeEmbedder:
                 )
                 batch_embeddings = [item.values for item in response.data]
                 embeddings.extend(batch_embeddings)
-                print(f"   ✅ Embedded {end}/{total}")
+                print(f"    Embedded {end}/{total}")
 
             if not embeddings:
                 raise RuntimeError("No embeddings returned from Pinecone")
 
-            print(f"✅ Generated {len(embeddings)} embeddings with {len(embeddings[0])} dimensions")
+            print(f" Generated {len(embeddings)} embeddings with {len(embeddings[0])} dimensions")
             return embeddings
 
         except Exception as e:
-            print(f"❌ Failed to generate embeddings: {e}")
+            print(f" Failed to generate embeddings: {e}")
             raise
 
     def store_chunks(
@@ -94,8 +140,8 @@ class PineconeEmbedder:
         embeddings: list[list[float]],
         namespace: str = "default",
     ):
-        """Store chunks and embeddings in Pinecone."""
-        print(f"📦 Storing {len(chunks)} chunks in Pinecone...")
+        """Store chunks and embeddings in Pinecone (both dense and sparse)."""
+        print(f" Storing {len(chunks)} chunks in Pinecone...")
 
         # Prepare vectors for upsert. Use chunk['id'] when available.
         vectors = []
@@ -114,17 +160,46 @@ class PineconeEmbedder:
             }
             vectors.append(vector)
 
-        # Upsert to Pinecone
+        # Upsert to dense Pinecone index
         try:
             self.index.upsert(vectors=vectors, namespace=namespace)
-            print(f"✅ Successfully stored {len(vectors)} vectors in namespace '{namespace}'")
+            print(f" Successfully stored {len(vectors)} dense vectors in namespace '{namespace}'")
         except Exception as e:
-            print(f"❌ Failed to store vectors: {e}")
+            print(f" Failed to store dense vectors: {e}")
             raise
+
+        # Also store sparse vectors if sparse index is configured
+        if self.sparse_index:
+            print(" Also storing sparse vectors...")
+            sparse_vectors = []
+            for chunk, embedding in zip(chunks, embeddings, strict=False):
+                fallback_id = f"chunk_{len(sparse_vectors)}_{chunk.get('metadata', {}).get('source', 'unknown')}"
+                vec_id = str(chunk.get("id", fallback_id))
+                
+                # Generate sparse embedding
+                text = chunk.get("text", "")
+                sparse_emb = self.create_bm25_sparse_embedding(text)
+                
+                # Sparse-only vector (no dense component)
+                sparse_vector = {
+                    "id": vec_id,
+                    "sparse_values": sparse_emb,
+                    "metadata": {
+                        **(chunk.get("metadata") or {}),
+                        "text": (chunk.get("text") or "")[:1000],
+                    },
+                }
+                sparse_vectors.append(sparse_vector)
+            
+            try:
+                self.sparse_index.upsert(vectors=sparse_vectors, namespace=namespace)
+                print(f" Successfully stored {len(sparse_vectors)} sparse vectors in namespace '{namespace}'")
+            except Exception as e:
+                print(f"  Failed to store sparse vectors: {e}")
 
     def search_similar(self, query: str, top_k: int = 5, namespace: str = "default") -> list[dict[str, Any]]:
         """Search for similar chunks using a query."""
-        print(f"🔍 Searching for similar chunks to: '{query}'")
+        print(f" Searching for similar chunks to: '{query}'")
 
         # Generate query embedding using Pinecone's built-in embedding
         try:
@@ -155,25 +230,37 @@ class PineconeEmbedder:
                     }
                 )
 
-            print(f"✅ Found {len(formatted_results)} similar chunks")
+            print(f" Found {len(formatted_results)} similar chunks")
             return formatted_results
 
         except Exception as e:
-            print(f"❌ Search failed: {e}")
+            print(f" Search failed: {e}")
             return []
 
     def get_index_stats(self) -> dict[str, Any]:
-        """Get statistics about the Pinecone index."""
+        """Get statistics about the Pinecone indices."""
+        stats = {}
         try:
-            stats = self.index.describe_index_stats()
-            return {
-                "total_vector_count": stats.total_vector_count,
-                "dimension": stats.dimension,
-                "namespaces": stats.namespaces,
+            dense_stats = self.index.describe_index_stats()
+            stats["dense"] = {
+                "total_vector_count": dense_stats.total_vector_count,
+                "dimension": dense_stats.dimension,
+                "namespaces": dense_stats.namespaces,
             }
         except Exception as e:
-            print(f"❌ Failed to get index stats: {e}")
-            return {}
+            print(f"  Failed to get dense index stats: {e}")
+
+        if self.sparse_index:
+            try:
+                sparse_stats = self.sparse_index.describe_index_stats()
+                stats["sparse"] = {
+                    "total_vector_count": sparse_stats.total_vector_count,
+                    "namespaces": sparse_stats.namespaces,
+                }
+            except Exception as e:
+                print(f"  Failed to get sparse index stats: {e}")
+
+        return stats
 
 
 def load_chunks_from_file(file_path: str) -> list[dict[str, Any]]:
@@ -181,29 +268,29 @@ def load_chunks_from_file(file_path: str) -> list[dict[str, Any]]:
     try:
         # Defensive: if caller accidentally passed a directory, skip with a clear message
         if os.path.isdir(file_path):
-            print(f"⚠️  Skipping directory when expecting a chunk file: {file_path}")
+            print(f"  Skipping directory when expecting a chunk file: {file_path}")
             return []
         with open(file_path, encoding="utf-8") as f:
             obj = json.load(f)
 
         # Accept either a list of chunks or a single chunk object
         if isinstance(obj, list):
-            print(f"✅ Loaded {len(obj)} chunks from {file_path}")
+            print(f" Loaded {len(obj)} chunks from {file_path}")
             return obj
         if isinstance(obj, dict):
-            print(f"✅ Loaded 1 chunk from {file_path}")
+            print(f" Loaded 1 chunk from {file_path}")
             return [obj]
 
-        print(f"⚠️  Unexpected JSON format in {file_path}")
+        print(f"  Unexpected JSON format in {file_path}")
         return []
     except Exception as e:
-        print(f"❌ Failed to load chunks from {file_path}: {e}")
+        print(f" Failed to load chunks from {file_path}: {e}")
         return []
 
 
 def display_search_results(results: list[dict[str, Any]], query: str):
     """Display search results in a formatted way."""
-    print(f"\n🔍 Query: '{query}'")
+    print(f"\n Query: '{query}'")
     print("-" * 50)
 
     if not results:
@@ -270,13 +357,13 @@ def main(
 
     # Check if chunks path exists
     if not os.path.exists(chunks_path):
-        print(f"❌ Chunks path not found: {chunks_path}")
+        print(f" Chunks path not found: {chunks_path}")
         print("Run the text chunking lab first to generate chunks in data/chunks.")
         return
 
     try:
         # Initialize embedder
-        print("\n🔧 Initializing Pinecone embedder...")
+        print("\n Initializing Pinecone embedder...")
         embedder = PineconeEmbedder(index_name=index_name)
 
         # Inspect index stats to decide upload behavior
@@ -294,7 +381,7 @@ def main(
             try:
                 manifest_list = json.loads(open(manifest, encoding="utf-8").read())
                 if isinstance(manifest_list, list) and manifest_list:
-                    print(f"📋 Loaded manifest with {len(manifest_list)} entries: {manifest}")
+                    print(f" Loaded manifest with {len(manifest_list)} entries: {manifest}")
                     for entry in manifest_list:
                         # resolve possible relative paths
                         cand = entry
@@ -302,20 +389,20 @@ def main(
                             # try relative to chunks_path
                             cand = os.path.join(chunks_path, os.path.basename(entry))
                         if not os.path.exists(cand):
-                            print(f"⚠️  Manifest entry not found, skipping: {entry}")
+                            print(f"  Manifest entry not found, skipping: {entry}")
                             continue
                         loaded = load_chunks_from_file(cand)
                         if loaded:
                             chunks.extend(loaded)
                     manifest_used = True
             except Exception as e:
-                print(f"⚠️ Failed to read manifest {manifest}: {e}")
+                print(f" Failed to read manifest {manifest}: {e}")
 
         # If manifest was used we already loaded desired files. Otherwise
         # inspect the `chunks_path` (it may be a directory of chunk files or a single file).
         if not manifest_used:
             if os.path.isdir(chunks_path):
-                print(f"\n📁 Inspecting chunk files in directory: {chunks_path}...")
+                print(f"\n Inspecting chunk files in directory: {chunks_path}...")
                 # collect json files with mtimes
                 candidates = []
                 for p in os.listdir(chunks_path):
@@ -328,7 +415,7 @@ def main(
                         candidates.append((p, mtime))
 
                 if not candidates:
-                    print(f"❌ No JSON chunk files found in directory: {chunks_path}")
+                    print(f" No JSON chunk files found in directory: {chunks_path}")
                     return
 
                 # sort by modification time (latest first)
@@ -340,13 +427,13 @@ def main(
                 if existing_vector_count == 0:
                     # index empty: upload all
                     selected = candidates
-                    print("📌 Pinecone index empty — will upload all chunk files.")
+                    print(" Pinecone index empty  will upload all chunk files.")
                 else:
                     if max_files and max_files > 0:
                         selected = candidates[:max_files]
                     else:
                         selected = candidates
-                    print(f"📌 Pinecone already has {existing_vector_count} vectors — uploading latest {len(selected)} file(s).")
+                    print(f" Pinecone already has {existing_vector_count} vectors  uploading latest {len(selected)} file(s).")
 
                 selected_files = [name for name, _ in selected]
 
@@ -356,43 +443,51 @@ def main(
                     if loaded:
                         chunks.extend(loaded)
             else:
-                print(f"\n📄 Loading chunks from file: {chunks_path}...")
+                print(f"\n Loading chunks from file: {chunks_path}...")
                 chunks = load_chunks_from_file(chunks_path)
 
         if not chunks:
-            print("❌ No chunks found. Run the chunking lab first.")
+            print(" No chunks found. Run the chunking lab first.")
             return
 
         # Generate embeddings
-        print("\n🧠 Generating embeddings...")
+        print("\n Generating embeddings...")
         embeddings = embedder.embed_chunks(chunks)
 
         # Store in Pinecone
-        print("\n📦 Storing chunks in Pinecone...")
+        print("\n Storing chunks in Pinecone...")
         embedder.store_chunks(chunks, embeddings, namespace=namespace)
 
         # Get index stats
-        print("\n📊 Index Statistics:")
+        print("\n Index Statistics:")
         stats = embedder.get_index_stats()
         if stats:
-            print(f"Total vectors: {stats.get('total_vector_count', 'Unknown')}")
-            print(f"Dimension: {stats.get('dimension', 'Unknown')}")
-            print(f"Namespaces: {list(stats.get('namespaces', {}).keys())}")
+            if "dense" in stats:
+                print(f"Dense Index:")
+                print(f"  Total vectors: {stats['dense'].get('total_vector_count', 'Unknown')}")
+                print(f"  Dimension: {stats['dense'].get('dimension', 'Unknown')}")
+                print(f"  Namespaces: {list(stats['dense'].get('namespaces', {}).keys())}")
+            if "sparse" in stats:
+                print(f"Sparse Index:")
+                print(f"  Total vectors: {stats['sparse'].get('total_vector_count', 'Unknown')}")
+                print(f"  Namespaces: {list(stats['sparse'].get('namespaces', {}).keys())}")
 
         # Test similarity search
-        print("\n🔍 Testing similarity search...")
+        print("\n Testing dense similarity search...")
         for query in test_queries:
             results = embedder.search_similar(query, top_k=top_k, namespace=namespace)
             display_search_results(results, query)
 
 
-        print("\n✅ Lab completed successfully!")
-        print(f"🎯 Chunks stored in namespace: {namespace}")
-        print(f"🎯 Index: {embedder.index_name}")
-        print("🎯 Ready for RAG system integration!")
+        print("\n Lab completed successfully!")
+        print(f" Chunks stored in namespace: {namespace}")
+        print(f" Dense Index: {embedder.index_name}")
+        if embedder.sparse_index:
+            print(f" Sparse Index: {embedder.sparse_index_name}")
+        print(" Ready for RAG system integration!")
 
     except Exception as e:
-        print(f"❌ Lab failed: {e}")
+        print(f" Lab failed: {e}")
         sys.exit(1)
 
 
