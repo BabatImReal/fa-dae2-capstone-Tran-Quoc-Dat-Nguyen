@@ -126,6 +126,7 @@ def main():
         - **Product by Category** (Snowflake)
         - **Order Summary by Quarter** (Snowflake)
         - **Latest Product Summary** (PostgreSQL)
+        - **Document Search** (RAG)
         """)
         
         st.markdown("---")
@@ -136,6 +137,8 @@ def main():
             "Get a product from the health_beauty category",
             "What were the order statistics for Q3 2018?",
             "Get me the latest product summary from PostgreSQL",
+            "What is clustering algorithm?",
+            "Tell me about data engineering",
         ]
         
         for query in example_queries:
@@ -169,7 +172,7 @@ def main():
     
     # Main chat interface
     st.title("🤖 Data Analyst AI Agent")
-    st.markdown("Ask me about products, orders, and analytics data!")
+    st.markdown("Ask me about products, orders, analytics data, or documents from your knowledge base!")
     
     # Display chat history
     for message in st.session_state.messages:

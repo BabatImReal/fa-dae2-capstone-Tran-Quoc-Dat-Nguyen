@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-import re
 from typing import Any
 from pathlib import Path
 
@@ -19,14 +18,10 @@ class PineconeEmbedder:
     """Handles embedding generation and Pinecone storage for RAG systems."""
 
     def __init__(self, index_name: str = None):
-        """Initialize the Pinecone embedder."""
+        """Initialize the Pinecone embedder for dense embeddings only."""
         self.index_name = index_name or os.getenv("PINECONE_DENSE_INDEX_NAME")
-        self.sparse_index_name = os.getenv("PINECONE_SPARSE_INDEX_NAME")
         self.pc = None
         self.index = None
-        self.sparse_index = None
-        self.vocab = {}
-        self.next_idx = 0
         self._initialize()
 
     def _initialize(self):
@@ -56,47 +51,6 @@ class PineconeEmbedder:
             print(f" Failed to connect to dense index {self.index_name}: {e}")
             print("Make sure the index exists and you have access to it")
             raise
-
-        # Connect to sparse index if configured
-        if self.sparse_index_name:
-            try:
-                self.sparse_index = self.pc.Index(self.sparse_index_name)
-                print(f" Connected to Pinecone sparse index: {self.sparse_index_name}")
-            except Exception as e:
-                print(f"  Could not connect to sparse index {self.sparse_index_name}: {e}")
-                self.sparse_index = None
-
-    def create_bm25_sparse_embedding(self, text: str) -> dict[str, Any]:
-        """Create sparse embedding from text using keyword extraction."""
-        try:
-            words = re.findall(r'\b[a-z]{3,}\b', text.lower())
-            stop_words = {
-                'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
-                'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
-                'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can',
-                'that', 'this', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they'
-            }
-            keywords = [w for w in set(words) if w not in stop_words]
-            keywords = sorted(keywords)[:50]
-            
-            if not keywords:
-                keywords = ['text']
-            
-            indices = []
-            values = []
-            
-            for keyword in keywords:
-                if keyword not in self.vocab:
-                    self.vocab[keyword] = self.next_idx
-                    self.next_idx += 1
-                idx = self.vocab[keyword]
-                indices.append(idx)
-                values.append(1.0)
-            
-            return {"indices": indices, "values": values}
-        except Exception as e:
-            print(f"  Error creating sparse embedding: {e}")
-            return {"indices": [0], "values": [1.0]}
 
     def embed_chunks(self, chunks: list[dict[str, Any]]) -> list[list[float]]:
         """Generate embeddings for document chunks using Pinecone's built-in embedding."""
@@ -140,8 +94,8 @@ class PineconeEmbedder:
         embeddings: list[list[float]],
         namespace: str = "default",
     ):
-        """Store chunks and embeddings in Pinecone (both dense and sparse)."""
-        print(f" Storing {len(chunks)} chunks in Pinecone...")
+        """Store chunks and embeddings in Pinecone dense index only."""
+        print(f" Storing {len(chunks)} dense vectors in Pinecone...")
 
         # Prepare vectors for upsert. Use chunk['id'] when available.
         vectors = []
@@ -167,35 +121,6 @@ class PineconeEmbedder:
         except Exception as e:
             print(f" Failed to store dense vectors: {e}")
             raise
-
-        # Also store sparse vectors if sparse index is configured
-        if self.sparse_index:
-            print(" Also storing sparse vectors...")
-            sparse_vectors = []
-            for chunk, embedding in zip(chunks, embeddings, strict=False):
-                fallback_id = f"chunk_{len(sparse_vectors)}_{chunk.get('metadata', {}).get('source', 'unknown')}"
-                vec_id = str(chunk.get("id", fallback_id))
-                
-                # Generate sparse embedding
-                text = chunk.get("text", "")
-                sparse_emb = self.create_bm25_sparse_embedding(text)
-                
-                # Sparse-only vector (no dense component)
-                sparse_vector = {
-                    "id": vec_id,
-                    "sparse_values": sparse_emb,
-                    "metadata": {
-                        **(chunk.get("metadata") or {}),
-                        "text": (chunk.get("text") or "")[:1000],
-                    },
-                }
-                sparse_vectors.append(sparse_vector)
-            
-            try:
-                self.sparse_index.upsert(vectors=sparse_vectors, namespace=namespace)
-                print(f" Successfully stored {len(sparse_vectors)} sparse vectors in namespace '{namespace}'")
-            except Exception as e:
-                print(f"  Failed to store sparse vectors: {e}")
 
     def search_similar(self, query: str, top_k: int = 5, namespace: str = "default") -> list[dict[str, Any]]:
         """Search for similar chunks using a query."""
@@ -238,7 +163,7 @@ class PineconeEmbedder:
             return []
 
     def get_index_stats(self) -> dict[str, Any]:
-        """Get statistics about the Pinecone indices."""
+        """Get statistics about the dense Pinecone index."""
         stats = {}
         try:
             dense_stats = self.index.describe_index_stats()
@@ -249,16 +174,6 @@ class PineconeEmbedder:
             }
         except Exception as e:
             print(f"  Failed to get dense index stats: {e}")
-
-        if self.sparse_index:
-            try:
-                sparse_stats = self.sparse_index.describe_index_stats()
-                stats["sparse"] = {
-                    "total_vector_count": sparse_stats.total_vector_count,
-                    "namespaces": sparse_stats.namespaces,
-                }
-            except Exception as e:
-                print(f"  Failed to get sparse index stats: {e}")
 
         return stats
 
@@ -482,9 +397,8 @@ def main(
         print("\n Lab completed successfully!")
         print(f" Chunks stored in namespace: {namespace}")
         print(f" Dense Index: {embedder.index_name}")
-        if embedder.sparse_index:
-            print(f" Sparse Index: {embedder.sparse_index_name}")
         print(" Ready for RAG system integration!")
+        print("\n Next: Run sparse_embedder.py for sparse embeddings")
 
     except Exception as e:
         print(f" Lab failed: {e}")
