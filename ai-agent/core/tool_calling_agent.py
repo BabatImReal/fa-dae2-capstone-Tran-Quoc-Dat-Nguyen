@@ -38,6 +38,11 @@ from tools.rag_tools import (
     search_documents
 )
 
+from tools.rag_combined_tools import (
+    hybrid_search_documents
+)
+
+
 # Load environment variables
 load_dotenv()
 
@@ -98,7 +103,8 @@ def create_tool_calling_agent():
              get_product_by_category_from_snowflake, 
              get_order_summary_by_quarter_from_snowflake,
              get_latest_product_summary_from_postgre,
-             search_documents]
+             search_documents,
+             hybrid_search_documents]
     tools_by_name = {tool.name: tool for tool in tools}
 
     # Augment the LLM with tools
@@ -120,18 +126,41 @@ Available tools:
 - get_product_by_category_from_snowflake: Retrieve 1 product from a given product category
 - get_order_summary_by_quarter_from_snowflake: Get order summary statistics for a specific year and quarter
 - get_latest_product_summary_from_postgre: Get the latest ingested product event from PostgreSQL
-- search_documents: Search for information in capstone documents using semantic similarity
+- search_documents: OLD METHOD - Search for information using ONLY semantic/dense similarity (single search method)
+- hybrid_search_documents: RECOMMENDED - Search for information using BOTH semantic (dense) AND lexical (sparse) similarity with reranking
 
-TOOL SELECTION (call the right tool for each query):
-- Character/person names (Fiona, Donkey, Pamela) → search_documents
-- Movie/book titles (BeeMovie, Shrek) → search_documents
-- Unknown topics → search_documents
-- All topics not relating to products, categories, or summary of orders → search_documents
+SEARCH TOOLS COMPARISON:
+╔════════════════════════════════════════════════════════════════════╗
+║ search_documents (Semantic Only - Legacy)                          ║
+║ - Uses dense embeddings only (semantic/contextual meaning)         ║
+║ - Single search method: Fast but may miss exact keyword matches    ║
+║ - No reranking                                                      ║
+║ - Use when: Need quick semantic search only                        ║
+╠════════════════════════════════════════════════════════════════════╣
+║ hybrid_search_documents (Hybrid - RECOMMENDED)                     ║
+║ - Uses BOTH dense (semantic) AND sparse (keyword) embeddings      ║
+║ - Combines 2 search methods: Better coverage of both meaning & keywords
+║ - Merges & deduplicates results from both indexes                 ║
+║ - Final reranking with bge-reranker-v2-m3 (cross-encoder model)   ║
+║ - Use when: Need comprehensive search combining semantics + keywords
+║ - Parameters:                                                       ║
+║   • query (required): Search query                                 ║
+║   • top_k (optional, default=3): Number of results                ║
+║   • alpha (optional, default=0.5): 0.0=pure keywords, 1.0=pure semantic
+╚════════════════════════════════════════════════════════════════════╝
+
+RECOMMENDED TOOL SELECTION:
+- ALWAYS use hybrid_search_documents for document searches (better quality results)
+- ONLY use search_documents if you specifically need legacy behavior
+- Character/person names (Fiona, Donkey, Pamela) → hybrid_search_documents
+- Movie/book titles (BeeMovie, Shrek) → hybrid_search_documents
+- Unknown topics or document content → hybrid_search_documents
+- All topics not relating to products, categories, or summary of orders → hybrid_search_documents
 - Product categories → get_all_product_categories_from_snowflake
 - Specific product from category → get_product_by_category_from_snowflake
 - Orders/quarterly data → get_order_summary_by_quarter_from_snowflake
 - Latest data → get_latest_product_summary_from_postgre
-- DO NOT use search_documents for general questions like:
+- DO NOT use any search tool for general questions like:
   - Personal questions (e.g., "What is my name?", "How are you?", "What's the weather?")
   - General knowledge questions (e.g., "What is Python?", "How does machine learning work?")
   - Conversational questions (e.g., "Hello", "Thank you", "Good morning")
