@@ -1,4 +1,4 @@
-"""Combined RAG tools for hybrid search combining dense and sparse embeddings with reranking."""
+"""Combined RAG tools for hybrid search combining dense and sparse embeddings."""
 
 import os
 from typing import Any
@@ -10,15 +10,6 @@ from pinecone import Pinecone
 # Load environment variables
 load_dotenv()
 
-# Try to import sentence-transformers for reranking
-try:
-    from sentence_transformers import CrossEncoder
-    HAS_RERANKER = True
-    reranker = None  # Lazy load on first use
-except ImportError:
-    HAS_RERANKER = False
-    print("Warning: sentence-transformers not installed. Install with: pip install sentence-transformers")
-
 
 def normalize_score(score: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
     """Normalize score to 0-1 range."""
@@ -27,65 +18,14 @@ def normalize_score(score: float, min_val: float = 0.0, max_val: float = 1.0) ->
     return (score - min_val) / (max_val - min_val)
 
 
-def get_reranker():
-    """Lazy load the bge-reranker-v2-m3 model on first use."""
-    global reranker
-    if reranker is None and HAS_RERANKER:
-        print("  [Reranker] Loading bge-reranker-v2-m3 model...")
-        reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
-    return reranker
-
-
-def rerank_results(query: str, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """
-    Rerank results using bge-reranker-v2-m3 cross-encoder model.
-    
-    Args:
-        query: The search query
-        results: List of result documents with 'id' and 'text' fields
-        
-    Returns:
-        List of results sorted by reranker score
-    """
-    if not HAS_RERANKER or not results:
-        return results
-    
-    try:
-        reranker_model = get_reranker()
-        if reranker_model is None:
-            return results
-        
-        print(f"  [Reranker] Reranking {len(results)} results with bge-reranker-v2-m3...")
-        
-        # Prepare pairs for reranking: (query, document_text)
-        pairs = [[query, result.get("text", "")] for result in results]
-        
-        # Get reranker scores
-        reranker_scores = reranker_model.predict(pairs)
-        
-        # Add reranker scores to results
-        for result, score in zip(results, reranker_scores):
-            result["reranker_score"] = float(score)
-        
-        # Sort by reranker score (descending)
-        reranked_results = sorted(results, key=lambda x: x.get("reranker_score", 0.0), reverse=True)
-        
-        print(f"  [Reranker] Reranking completed")
-        return reranked_results
-        
-    except Exception as e:
-        print(f"  [Reranker] Reranking failed: {e}")
-        return results
-
-
 @tool
 def hybrid_search_documents(query: str, top_k: int = 3, alpha: float = 0.5) -> dict[str, Any]:
     """
-    Hybrid search combining dense (semantic) and sparse (lexical) search with optional reranking.
+    Hybrid search combining dense (semantic) and sparse (lexical) search.
     
     Performs semantic search (dense) and lexical search (sparse) to get top 10 results from each,
-    then merges, deduplicates, and re-ranks them by a weighted hybrid score. If the bge-reranker-v2-m3
-    model is available, applies cross-encoder reranking for improved relevance.
+    then merges, deduplicates (keeping only documents found in BOTH searches), and re-ranks them
+    by a weighted hybrid score.
     
     Args:
         query: Search query
@@ -98,7 +38,6 @@ def hybrid_search_documents(query: str, top_k: int = 3, alpha: float = 0.5) -> d
     Returns:
         Dict with merged and re-ranked results from both indexes, including:
         - hybrid_score: Weighted average of normalized dense and sparse scores
-        - reranker_score: Cross-encoder relevance score (if bge-reranker-v2-m3 available)
         - dense_score: Semantic similarity score (0-1)
         - sparse_score: BM25+ keyword matching score (variable range)
         - content: Document text
@@ -201,8 +140,31 @@ def hybrid_search_documents(query: str, top_k: int = 3, alpha: float = 0.5) -> d
         
         print(f"\n  [Merging] Total merged documents: {len(merged_scores)}")
         
+        # Filter to keep ONLY chunks with BOTH dense AND sparse scores (high-confidence matches)
+        print("  [Filtering] Keeping only documents with BOTH dense AND sparse scores...")
+        high_confidence_merged = {}
+        
+        for doc_id, doc_data in merged_scores.items():
+            if doc_data['dense_score'] is not None and doc_data['sparse_score'] is not None:
+                high_confidence_merged[doc_id] = doc_data
+        
+        print(f"  [Filtering] Filtered from {len(merged_scores)} to {len(high_confidence_merged)} high-confidence documents")
+        
+        # Use filtered results
+        merged_scores = high_confidence_merged
+        
+        # Recalculate dense and sparse score lists
+        dense_scores = {doc_id: doc_data['dense_score'] for doc_id, doc_data in merged_scores.items()}
+        sparse_scores = {doc_id: doc_data['sparse_score'] for doc_id, doc_data in merged_scores.items()}
+        
+        # Debug: Show high-confidence documents
+        print(f"\n  [DEBUG High-Confidence Documents] All {len(merged_scores)} results with BOTH scores:")
+        merged_list = list(merged_scores.values())
+        for i, doc in enumerate(sorted(merged_list, key=lambda x: x['id']), 1):
+            print(f"    [{i:2d}] ID: {doc['id']:30s} | Dense: {doc['dense_score']:>7.4f} | Sparse: {doc['sparse_score']:>7.4f}")
+        
         # ===== STEP 5: Re-rank by Hybrid Score =====
-        print("  [Re-ranking] Computing hybrid scores...")
+        print("\n  [Re-ranking] Computing hybrid scores...")
         
         # Find min/max for normalization
         dense_values = [s for s in dense_scores.values()]
@@ -229,24 +191,17 @@ def hybrid_search_documents(query: str, top_k: int = 3, alpha: float = 0.5) -> d
                 "hybrid_score": hybrid_score,
             })
         
-        # ===== STEP 5b: Optional Reranking with bge-reranker-v2-m3 =====
-        # Sort by hybrid score first, then apply reranker if available
-        hybrid_results = sorted(hybrid_results, key=lambda x: x["hybrid_score"], reverse=True)
-        
-        if HAS_RERANKER:
-            print("  [Reranker] Using bge-reranker-v2-m3 for final reranking...")
-            hybrid_results = rerank_results(query, hybrid_results)
-            # After reranking, results are sorted by reranker_score (descending)
+        # Debug: Print top 3 hybrid scores
+        print(f"\n  [DEBUG Hybrid Scores] Top 3 results after hybrid score calculation:")
+        sorted_hybrid = sorted(hybrid_results, key=lambda x: x["hybrid_score"], reverse=True)
+        for i, result in enumerate(sorted_hybrid[:3], 1):
+            print(f"    [{i}] ID: {result['id']:30s} | Hybrid: {result['hybrid_score']:>7.4f} | Dense: {result['dense_score']:>7.4f} | Sparse: {result['sparse_score']:>7.4f}")
         
         # ===== STEP 6: Get Top K Results =====
-        print(f"  [Top K] Selecting top {top_k} results (ranked by {'reranker_score' if HAS_RERANKER else 'hybrid_score'})...")
-        top_results = hybrid_results[:top_k]
+        print(f"\n  [Top K] Selecting top {top_k} results (ranked by hybrid_score)...")
         
-        # Debug: Print final top 3 after all ranking
-        if HAS_RERANKER:
-            print(f"\n  [DEBUG Final] Top 3 results after reranking:")
-            for i, result in enumerate(top_results[:3], 1):
-                print(f"    [{i}] ID: {result['id']}, Reranker: {result.get('reranker_score', 'N/A'):.4f}, Hybrid: {result['hybrid_score']:.4f}")
+        # Sort by hybrid score and get top K
+        top_results = sorted(hybrid_results, key=lambda x: x["hybrid_score"], reverse=True)[:top_k]
         
         # Format for output
         formatted_results = []
@@ -260,9 +215,6 @@ def hybrid_search_documents(query: str, top_k: int = 3, alpha: float = 0.5) -> d
                 "source": result["source"],
                 "chunk_id": result["id"],
             }
-            # Add reranker score if available (this is what determined the final ranking)
-            if "reranker_score" in result:
-                formatted_result["reranker_score"] = round(result["reranker_score"], 4)
             formatted_results.append(formatted_result)
         
         print(f"✅ Hybrid search completed: Found {len(merged_scores)} merged results, returning top {top_k}")
