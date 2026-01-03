@@ -27,10 +27,18 @@ except Exception:
         spec.loader.exec_module(tool_module)
         create_tool_calling_agent = getattr(tool_module, "create_tool_calling_agent")
 
-def cli_interface_with_tools():
-    """CLI interface for the tool-calling agent"""
+def cli_interface_with_tools(human_in_the_loop: bool = True):
+    """CLI interface for the tool-calling agent
+    
+    Args:
+        human_in_the_loop: If True, ask for approval before executing tools (default: True)
+    """
     print("🤖 Tool-Calling AI Agent")
     print("=" * 60)
+    if human_in_the_loop:
+        print("⚠️  HUMAN-IN-THE-LOOP MODE ENABLED")
+        print("   You will be asked to approve tool execution before running.")
+        print("=" * 60)
     print("This agent can:")
     print("  • Retrieve a product from a specific category")
     print("  • Get order summary for a specific year and quarter")
@@ -44,8 +52,8 @@ def cli_interface_with_tools():
     print("  'examples' - Show example queries")
     print("=" * 60)
 
-    # Create the tool-calling agent
-    agent = create_tool_calling_agent()
+    # Create the tool-calling agent with human-in-the-loop option
+    agent = create_tool_calling_agent(human_in_the_loop=human_in_the_loop)
 
     # Get user name
     user_name = input("What's your name? ").strip() or "User"
@@ -196,4 +204,6 @@ def display_conversation_flow(result: Dict[str, Any]):
 
 
 if __name__ == "__main__":
-    cli_interface_with_tools()
+    # Check for --no-hitl flag to disable (enabled by default)
+    hitl = "--no-hitl" not in sys.argv
+    cli_interface_with_tools(human_in_the_loop=hitl)

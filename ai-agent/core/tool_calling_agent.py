@@ -89,8 +89,12 @@ def print_state(state: MessagesState, step_name: str):
     print(f"{'='*50}\n")
 
 
-def create_tool_calling_agent():
-    """Create a tool-calling agent using LangGraph StateGraph"""
+def create_tool_calling_agent(human_in_the_loop: bool = True):
+    """Create a tool-calling agent using LangGraph StateGraph
+    
+    Args:
+        human_in_the_loop: If True, ask for approval before executing tools (default: True)
+    """
 
     # Initialize LLM
     llm = ChatOpenAI(
@@ -174,10 +178,38 @@ Instead, provide a brief ANALYSIS/SYNTHESIS of what the raw results mean:
 - Provide insights or observations
 - Do NOT reformat or restructure the raw data - just analyze it
 
+IMPORTANT: If MULTIPLE TOOLS were used, you MUST provide:
+1. Individual response analysis for each tool used
+2. A final summary section that synthesizes all tool responses together
+
+Format for multiple tools:
+---
+Tool 1 Response: [Tool Name]
+[Brief analysis of what this tool returned]
+
+Tool 2 Response: [Tool Name]
+[Brief analysis of what this tool returned]
+
+Tool 3 Response: [Tool Name] (if applicable)
+[Brief analysis of what this tool returned]
+
+---
+SUMMARY:
+[Synthesize all tool responses together to answer the user's question comprehensively]
+---
+
 Example:
-User: "Tell me about Fiona"
+User: "Tell me about Fiona and show me product categories"
 [RAW TOOL OUTPUT SHOWN BY SYSTEM]
-Your response should be: "Based on the search results, Fiona is a character from Shrek who... [key points]. The relevance scores indicate these are the most relevant scenes involving her..."
+Your response should be:
+"Tool 1 Response: hybrid_search_documents
+Based on the search results, Fiona is a character from Shrek who appears in several key scenes...
+
+Tool 2 Response: get_all_product_categories_from_snowflake  
+The query returned 15 unique product categories from the Snowflake database...
+
+SUMMARY:
+The analysis shows information from two different data sources: character information from documents (Fiona from Shrek) and product catalog data (15 categories). These results address both parts of your query by providing character details and product category information."
 
 Keep your analysis brief and focused on answering the user's question."""
                         )
@@ -187,11 +219,58 @@ Keep your analysis brief and focused on answering the user's question."""
             ]
         }
 
+    def human_approval_node(state: dict):
+        """Ask for human approval before executing tools"""
+        print_state(state, "Human Approval Required")
+        last_message = state["messages"][-1]
+        tool_calls = last_message.tool_calls
+        
+        print("\n" + "="*60)
+        print("🔔 TOOL APPROVAL REQUIRED")
+        print("="*60)
+        print(f"\nThe agent wants to execute {len(tool_calls)} tool(s):\n")
+        
+        for i, tool_call in enumerate(tool_calls, 1):
+            print(f"  {i}. 🔧 Tool: {tool_call['name']}")
+            if tool_call["args"]:
+                print(f"     📝 Arguments:")
+                for key, value in tool_call["args"].items():
+                    # Truncate long values for readability
+                    value_str = str(value)
+                    if len(value_str) > 100:
+                        value_str = value_str[:97] + "..."
+                    print(f"        • {key}: {value_str}")
+            else:
+                print(f"     📝 Arguments: (none)")
+            print()
+        
+        while True:
+            decision = input("\n🤔 Approve execution? (yes/y to approve, no/n to reject): ").strip().lower()
+            if decision in ['yes', 'y']:
+                print("✅ Approved! Executing tools...\n")
+                return {"messages": []}  # Continue to tool execution
+            elif decision in ['no', 'n']:
+                print("❌ Rejected! Stopping execution.\n")
+                # Create a message indicating rejection
+                rejection_msg = "Tool execution was rejected by the user."
+                return {
+                    "messages": [
+                        ToolMessage(
+                            content=rejection_msg,
+                            tool_call_id=tool_calls[0]["id"] if tool_calls else "rejected"
+                        )
+                    ]
+                }
+            else:
+                print("❓ Please enter 'yes' or 'no'")
+    
     def tool_node(state: dict):
         """Performs the tool call"""
         print_state(state, "Before Tool Execution")
         result = []
-        for tool_call in state["messages"][-1].tool_calls:
+        tool_calls = state["messages"][-1].tool_calls
+        
+        for tool_call in tool_calls:
             tool = tools_by_name[tool_call["name"]]
             try:
                 observation = tool.invoke(tool_call["args"])
@@ -203,17 +282,71 @@ Keep your analysis brief and focused on answering the user's question."""
                 result.append(
                     ToolMessage(content=error_msg, tool_call_id=tool_call["id"])
                 )
+        
+        # Display individual tool responses and summary if human-in-the-loop is enabled
+        if human_in_the_loop and len(tool_calls) > 1:
+            print("\n" + "="*60)
+            print("📊 TOOL EXECUTION RESULTS")
+            print("="*60 + "\n")
+            
+            # Show each tool response individually
+            for i, (tool_call, tool_result) in enumerate(zip(tool_calls, result), 1):
+                print(f"🔧 Tool {i}: {tool_call['name']}")
+                print("-" * 60)
+                
+                # Display full response
+                response_content = str(tool_result.content)
+                if tool_result.content.startswith("Error"):
+                    print(f"❌ {response_content}")
+                else:
+                    # Try to format JSON nicely if possible
+                    try:
+                        import json
+                        if isinstance(tool_result.content, str) and (tool_result.content.startswith('{') or tool_result.content.startswith('[')):
+                            parsed = json.loads(tool_result.content)
+                            print(json.dumps(parsed, indent=2))
+                        else:
+                            print(response_content)
+                    except:
+                        print(response_content)
+                print()
+            
+            # Summary of all responses
+            print("="*60)
+            print("📋 SUMMARY OF ALL TOOL RESPONSES")
+            print("="*60)
+            success_count = sum(1 for r in result if not str(r.content).startswith("Error"))
+            error_count = len(result) - success_count
+            
+            print(f"Total tools executed: {len(tool_calls)}")
+            print(f"✅ Successful: {success_count}")
+            if error_count > 0:
+                print(f"❌ Failed: {error_count}")
+            
+            print("\nBrief overview:")
+            for i, (tool_call, tool_result) in enumerate(zip(tool_calls, result), 1):
+                status = "✅" if not str(tool_result.content).startswith("Error") else "❌"
+                result_snippet = str(tool_result.content)[:100].replace('\n', ' ')
+                if len(str(tool_result.content)) > 100:
+                    result_snippet += "..."
+                print(f"  {i}. {status} {tool_call['name']}: {result_snippet}")
+            
+            print("="*60 + "\n")
+        
         return {"messages": result}
 
     # Conditional edge function to route based on tool calls
-    def should_continue(state: MessagesState) -> Literal["tools", "end"]:
+    def should_continue(state: MessagesState) -> Literal["approval", "tools", "end"]:
         """Decide if we should continue the loop or stop based upon whether the LLM made a tool call"""
         messages = state["messages"]
         last_message = messages[-1]
 
         # If the LLM makes a tool call, then perform an action
         if last_message.tool_calls:
-            return "tools"
+            if human_in_the_loop:
+                return "approval"  # Route to approval node first
+            else:
+                return "tools"  # Execute directly without approval
         # Otherwise, we stop (reply to the user)
         return "end"
 
@@ -223,18 +356,35 @@ Keep your analysis brief and focused on answering the user's question."""
     # Add nodes
     agent_builder.add_node("llm_call", llm_call)
     agent_builder.add_node("tools", tool_node)
+    if human_in_the_loop:
+        agent_builder.add_node("approval", human_approval_node)
 
     # Add edges to connect nodes
     agent_builder.add_edge(START, "llm_call")
-    agent_builder.add_conditional_edges(
-        "llm_call",
-        should_continue,
-        {
-            # Name returned by should_continue : Name of next node to visit
-            "tools": "tools",
-            "end": END,
-        },
-    )
+    
+    if human_in_the_loop:
+        agent_builder.add_conditional_edges(
+            "llm_call",
+            should_continue,
+            {
+                # Name returned by should_continue : Name of next node to visit
+                "approval": "approval",
+                "tools": "tools",
+                "end": END,
+            },
+        )
+        agent_builder.add_edge("approval", "tools")  # After approval, execute tools
+    else:
+        agent_builder.add_conditional_edges(
+            "llm_call",
+            should_continue,
+            {
+                # Name returned by should_continue : Name of next node to visit
+                "tools": "tools",
+                "end": END,
+            },
+        )
+    
     agent_builder.add_edge("tools", "llm_call")
 
     # Compile the agent
@@ -306,10 +456,18 @@ def test_tool_calling_agent():
         print("-" * 40)
 
 
-def interactive_demo():
-    """Interactive demo of the tool-calling agent"""
+def interactive_demo(human_in_the_loop: bool = True):
+    """Interactive demo of the tool-calling agent
+    
+    Args:
+        human_in_the_loop: If True, ask for approval before executing tools (default: True)
+    """
     print("🤖 Tool-Calling Agent Interactive Demo")
     print("=" * 60)
+    if human_in_the_loop:
+        print("⚠️  HUMAN-IN-THE-LOOP MODE ENABLED")
+        print("   You will be asked to approve tool execution before running.")
+        print("=" * 60)
     print("Available tools:")
     print("  • Snowflake User Search (returns 1 user profile)")
     print("  • Snowflake Transaction Search (returns up to 10 transactions)")
@@ -324,7 +482,7 @@ def interactive_demo():
     print("  - 'quit' to exit")
     print("=" * 60)
 
-    agent = create_tool_calling_agent()
+    agent = create_tool_calling_agent(human_in_the_loop=human_in_the_loop)
 
     while True:
         try:
@@ -363,14 +521,17 @@ if __name__ == "__main__":
             agent = create_tool_calling_agent()
             visualize_agent_workflow(agent)
         elif sys.argv[1] == "interactive":
-            interactive_demo()
+            # Check for --no-hitl flag to disable (enabled by default)
+            hitl = "--no-hitl" not in sys.argv
+            interactive_demo(human_in_the_loop=hitl)
         else:
-            print("Usage: python tool_calling_agent.py [test|visualize|interactive]")
+            print("Usage: python tool_calling_agent.py [test|visualize|interactive [--hitl]]")
     else:
         print("🤖 Tool-Calling Agent")
         print("=" * 50)
         print("Available commands:")
-        print("  python tool_calling_agent.py test        - Run test cases")
-        print("  python tool_calling_agent.py visualize   - Show workflow diagram")
-        print("  python tool_calling_agent.py interactive - Interactive demo")
+        print("  python tool_calling_agent.py test                     - Run test cases")
+        print("  python tool_calling_agent.py visualize                - Show workflow diagram")
+        print("  python tool_calling_agent.py interactive              - Interactive demo (HITL enabled by default)")
+        print("  python tool_calling_agent.py interactive --no-hitl    - Interactive without Human-in-the-Loop")
         print("=" * 50)
