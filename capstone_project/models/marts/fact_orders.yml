@@ -60,12 +60,14 @@ models:
 
       - name: customer_key
         tests:
+          - not_null 
           - relationships:
               arguments:
                 to: ref('dim_customers')
                 field: customer_key
       - name: seller_key
         tests:
+          - not_null
           - relationships:
               arguments:
                 to: ref('dim_sellers')
@@ -73,6 +75,7 @@ models:
       - name: total_order_value
         description: "Total monetary value of the order in BRL"
         tests:
+          - not_null
           - dbt_expectations.expect_column_values_to_be_between:
               min_value: 0
               max_value: 200000
