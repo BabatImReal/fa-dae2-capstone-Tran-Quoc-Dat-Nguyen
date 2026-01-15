@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 # Third-party imports
 import snowflake.connector
+from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 import yaml
 
 # Set up logging
@@ -61,24 +62,43 @@ def sanitize_file_path(file_path, base_dir=None):
 
 
 # Get a Snowflake database connection using environment variables
+# def get_conn():
+#     load_dotenv()
+#     auth = os.getenv("SNOWFLAKE_AUTHENTICATOR", "SNOWFLAKE_JWT")
+    
+#     # Get and validate required parameters
+#     account = os.getenv("SNOWFLAKE_ACCOUNT")
+#     user = os.getenv("SNOWFLAKE_USER")
+    
+#     if not account:
+#         raise ValueError("SNOWFLAKE_ACCOUNT environment variable is not set")
+#     if not user:
+#         raise ValueError("SNOWFLAKE_USER environment variable is not set")
+    
+#     logger.info(f"Connecting to Snowflake account: {account}, user: {user}")
+    
+#     kwargs = {
+#         "account": account,
+#         "user": user,
+#         "authenticator": auth,
+#         "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+#         "database": os.getenv("SNOWFLAKE_DATABASE"),
+#         "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+#         "role": os.getenv("SNOWFLAKE_ROLE"),
+#     }
+#     if auth.upper() == "SNOWFLAKE_JWT":
+#         private_key_file = os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH")
+#         if not private_key_file:
+#             raise ValueError("SNOWFLAKE_PRIVATE_KEY_FILE_PATH is required for JWT authentication")
+#         kwargs.update(
+#             private_key_file=private_key_file,
+#             private_key_file_pwd=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD"),
+#         )
+#     return snowflake.connector.connect(**kwargs)
+
 def get_conn():
-    load_dotenv()
-    auth = os.getenv("SNOWFLAKE_AUTHENTICATOR", "SNOWFLAKE_JWT")
-    kwargs = {
-        "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-        "user": os.getenv("SNOWFLAKE_USER"),
-        "authenticator": auth,
-        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
-        "database": os.getenv("SNOWFLAKE_DATABASE"),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA"),
-        "role": os.getenv("SNOWFLAKE_ROLE"),
-    }
-    if auth.upper() == "SNOWFLAKE_JWT":
-        kwargs.update(
-            private_key_file=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH"),
-            private_key_file_pwd=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD"),
-        )
-    return snowflake.connector.connect(**kwargs)
+    hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
+    return hook.get_conn()
 
 
 # Upload a CSV file to the Snowflake stage
