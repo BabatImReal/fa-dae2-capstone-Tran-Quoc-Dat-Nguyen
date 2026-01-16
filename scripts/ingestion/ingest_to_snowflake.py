@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 # Third-party imports
 import snowflake.connector
+from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 import yaml
 
 # Set up logging
@@ -61,24 +62,43 @@ def sanitize_file_path(file_path, base_dir=None):
 
 
 # Get a Snowflake database connection using environment variables
+# def get_conn():
+#     load_dotenv()
+#     auth = os.getenv("SNOWFLAKE_AUTHENTICATOR", "SNOWFLAKE_JWT")
+    
+#     # Get and validate required parameters
+#     account = os.getenv("SNOWFLAKE_ACCOUNT")
+#     user = os.getenv("SNOWFLAKE_USER")
+    
+#     if not account:
+#         raise ValueError("SNOWFLAKE_ACCOUNT environment variable is not set")
+#     if not user:
+#         raise ValueError("SNOWFLAKE_USER environment variable is not set")
+    
+#     logger.info(f"Connecting to Snowflake account: {account}, user: {user}")
+    
+#     kwargs = {
+#         "account": account,
+#         "user": user,
+#         "authenticator": auth,
+#         "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
+#         "database": os.getenv("SNOWFLAKE_DATABASE"),
+#         "schema": os.getenv("SNOWFLAKE_SCHEMA"),
+#         "role": os.getenv("SNOWFLAKE_ROLE"),
+#     }
+#     if auth.upper() == "SNOWFLAKE_JWT":
+#         private_key_file = os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH")
+#         if not private_key_file:
+#             raise ValueError("SNOWFLAKE_PRIVATE_KEY_FILE_PATH is required for JWT authentication")
+#         kwargs.update(
+#             private_key_file=private_key_file,
+#             private_key_file_pwd=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD"),
+#         )
+#     return snowflake.connector.connect(**kwargs)
+
 def get_conn():
-    load_dotenv()
-    auth = os.getenv("SNOWFLAKE_AUTHENTICATOR", "SNOWFLAKE_JWT")
-    kwargs = {
-        "account": os.getenv("SNOWFLAKE_ACCOUNT"),
-        "user": os.getenv("SNOWFLAKE_USER"),
-        "authenticator": auth,
-        "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE"),
-        "database": os.getenv("SNOWFLAKE_DATABASE"),
-        "schema": os.getenv("SNOWFLAKE_SCHEMA"),
-        "role": os.getenv("SNOWFLAKE_ROLE"),
-    }
-    if auth.upper() == "SNOWFLAKE_JWT":
-        kwargs.update(
-            private_key_file=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PATH"),
-            private_key_file_pwd=os.getenv("SNOWFLAKE_PRIVATE_KEY_FILE_PWD"),
-        )
-    return snowflake.connector.connect(**kwargs)
+    hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
+    return hook.get_conn()
 
 
 # Upload a CSV file to the Snowflake stage
@@ -120,6 +140,40 @@ def upload_csv_to_stage(csv_file_path: str, stage_fqn: str, overwrite=True) -> b
         listed = cur.fetchall()
         logger.info(f"📄 Files in stage {stage}: {len(listed)}")
     return True
+
+
+def delete_stage_files(stage_fqn: str, file_pattern: str = "*") -> bool:
+    """Delete files from Snowflake stage matching the given pattern.
+    
+    Args:
+        stage_fqn: Full qualified name of the stage (e.g., DB.SCHEMA.STAGE)
+        file_pattern: Pattern to match files to delete (default: '*' for all files)
+    
+    Returns:
+        True on success, False otherwise.
+    """
+    try:
+        stage = sanitize_identifier(stage_fqn)
+        
+        # Validate file pattern to prevent SQL injection
+        if not re.match(r"^[a-zA-Z0-9._\-*?/\\()|]+$", file_pattern):
+            raise ValueError(f"Invalid file pattern: {file_pattern}")
+        
+        remove_sql = f"REMOVE @{stage}/{file_pattern}"
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute(remove_sql)
+            try:
+                rows = cur.fetchall()
+                logger.info(f"🗑️  Deleted {len(rows)} files from stage {stage} matching pattern '{file_pattern}'")
+                for r in rows:
+                    logger.debug(f"   Removed: {r[0]}")
+            except Exception:
+                # Some connectors return no rows
+                logger.info(f"🗑️  Files deleted from stage {stage} matching pattern '{file_pattern}'")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to delete files from stage {stage_fqn}: {e}")
+        return False
 
 
 # Mapping from config column names to Snowflake table column names
@@ -208,6 +262,10 @@ def main():
     # Derive a table namespace prefix from the stage/table config
     stage_prefix = STAGE_FQN.split(".")[0] if "." in STAGE_FQN else STAGE_FQN
 
+    # Delete old files from stage before uploading new ones
+    logger.info("🧹 Cleaning up old CSV files from stage...")
+    delete_stage_files(STAGE_FQN, "*.csv")
+
     # For each dataset configured in config['columns'], find the matching CSV and load it
     for dataset_name, cols in config.get("columns", {}).items():
         # Build expected filename patterns (files in the dataset folder)
@@ -237,6 +295,7 @@ def main():
 
         # Upload file to stage
         try:
+            logger.info(f"📤 Uploading {filename} to stage {STAGE_FQN}...")
             upload_csv_to_stage(local_path, STAGE_FQN, overwrite=True)
         except Exception as e:
             logger.error(f"Failed to upload {local_path} to stage {STAGE_FQN}: {e}")
@@ -247,10 +306,13 @@ def main():
         pattern = rf".*{escaped}(\.gz)?"
 
         try:
+            logger.info(f"📊 Loading {filename} into table {target_table}...")
             load_csv_file_from_stage_to_table(target_table, STAGE_FQN, pattern, cols)
         except Exception as e:
             logger.error(f"Failed to load {filename} into {target_table}: {e}")
             continue
+
+    logger.info("✅ CSV ingestion process completed successfully!")
 
 
 if __name__ == "__main__":

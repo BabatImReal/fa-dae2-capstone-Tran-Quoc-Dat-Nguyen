@@ -58,3 +58,5 @@ dbt_packages/
 airflow/config/
 airflow/logs/
 airflow/plugins/
+
+data/pdf
