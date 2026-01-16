@@ -11,11 +11,11 @@ load_dotenv()
 
 def get_connection():
     """Create PostgreSQL connection"""
-    host = os.getenv("LANGGRAPH_POSTGRES_HOST", "localhost")
-    port = os.getenv("LANGGRAPH_POSTGRES_PORT", "5433")
-    database = os.getenv("LANGGRAPH_POSTGRES_DB", "langgraph_memory")
-    user = os.getenv("LANGGRAPH_POSTGRES_USER", "postgres")
-    password = os.getenv("LANGGRAPH_POSTGRES_PASSWORD", "postgres")
+    host = os.getenv("LANGGRAPH_POSTGRES_HOST")
+    port = os.getenv("LANGGRAPH_POSTGRES_PORT")
+    database = os.getenv("LANGGRAPH_POSTGRES_DB")
+    user = os.getenv("LANGGRAPH_POSTGRES_USER")
+    password = os.getenv("LANGGRAPH_POSTGRES_PASSWORD")
     
     return psycopg.connect(
         f"postgresql://{user}:{password}@{host}:{port}/{database}",
