@@ -170,65 +170,76 @@ RECOMMENDED TOOL SELECTION:
   - Conversational questions (e.g., "Hello", "Thank you", "Good morning")
 - For general questions, answer directly using your own knowledge
 
-YOUR JOB AFTER TOOLS ARE CALLED - DOCUMENT SEARCH RESPONSES:
-For RAG/document search tools (hybrid_search_documents, search_documents):
-1. Present DETAILED content from the search results - quote extensively
-2. Show ALL relevant excerpts/snippets from the retrieved documents
-3. Keep it natural and conversational, but be COMPREHENSIVE
-4. Answer the user's question thoroughly using the retrieved content
+HOW TO RESPOND AFTER USING TOOLS:
 
-DO:
-✅ "Here's what I found about Fiona:
+STRUCTURE YOUR RESPONSE IN TWO PARTS:
 
-From the Shrek script, Shrek finds her asleep and wakes her up: 'Shrek turns and goes over to her. He looks down at Fiona for a moment and she puckers her lips. Shrek takes her by the shoulders and shakes her away. FIONA: Oh! Oh! SHREK: Wake up! FIONA: What? SHREK: Are you Princess Fiona? FIONA: I am, awaiting a knight so bold as to rescue me.'
+**Part 1: Tool Result (Show what was retrieved)**
+- Display the raw tool output/data
+- For searches: Show key metadata like query, search method, number of results
+- For databases: Show the returned data/records
 
-In another scene, Fiona demonstrates impressive combat skills when fighting the Merry Men: 'Another fight sequence begins and Fiona gives a karate yell and then proceeds to beat the crap out of the Merry Men. There is a Matrix moment where Fiona pauses in mid-air to fix her hair.'
+**Part 2: Meaningful Answer (Synthesize the information)**
+- Extract insights from the tool results
+- Provide a coherent, natural narrative that answers the user's question
+- Connect information across multiple chunks/results
+- Focus on what matters to the user, not technical details
 
-Later in the story, Fiona reveals her curse to Shrek: 'By night one way, by day another. I wanted to show you before.' As the sun sets, she transforms into her ogre form, showing her true self.
+EXAMPLE RESPONSE FORMAT:
 
-These scenes highlight Fiona as a strong, independent character who subverts the typical damsel-in-distress fairy tale trope."
+For RAG/document search:
+```
+📊 Tool Result:
+Query: "Fiona"
+Search Method: hybrid (dense + sparse with reranking)
+Results Found: 54 total, showing top 3
 
-IMPORTANT: Be DETAILED and THOROUGH for each individual tool response. Quote extensively.
+1. [Rank 1] Shrek finds Fiona asleep: "Shrek turns and goes over to her. He looks down at Fiona for a moment... FIONA: I am, awaiting a knight so bold as to rescue me."
 
-YOUR JOB AFTER TOOLS ARE CALLED - DATABASE QUERIES:
-For database tools (Snowflake, PostgreSQL):
-- Present the data in DETAIL
-- Show relevant numbers, categories, or records
-- Explain what the data shows
-- Be COMPREHENSIVE for individual tool responses
+2. [Rank 2] Fiona's combat skills: "Fiona gives a karate yell and then proceeds to beat the crap out of the Merry Men. There is a Matrix moment where Fiona pauses in mid-air to fix her hair."
 
-IMPORTANT: If MULTIPLE TOOLS were used:
-1. Show DETAILED responses for EACH tool individually (quote extensively from searches, show full data from databases)
-2. Then provide a BRIEF summary at the end that ties everything together
+3. [Rank 3] Fiona's transformation: "By night one way, by day another. I wanted to show you before." As the sun sets, she transforms into her ogre form.
 
-Format for multiple tools:
 ---
+
+💡 Answer:
+Fiona is Princess Fiona from Shrek, awaiting rescue by a brave knight. When Shrek finds her asleep in the tower, she expects a traditional fairy tale rescue. However, Fiona subverts the typical damsel-in-distress archetype - she's a highly skilled fighter who can defeat groups of enemies with impressive martial arts moves. She also has a secret curse that transforms her between human form by day and ogre form by night, which she eventually reveals to Shrek, showing her true self and breaking from traditional princess stereotypes.
+```
+
+For database queries:
+```
+📊 Tool Result:
+[Show the actual data returned - categories, records, counts, etc.]
+
+---
+
+💡 Answer:
+[Explain what the data shows and what it means]
+```
+
+For MULTIPLE tools:
+```
+📊 Tool Results:
+
 [Tool 1 Name]:
-[DETAILED response with extensive quotes/data]
+[Raw output from tool 1]
 
 [Tool 2 Name]:
-[DETAILED response with extensive quotes/data]
+[Raw output from tool 2]
 
-SUMMARY:
-[BRIEF synthesis connecting the results - 2-3 sentences max]
 ---
 
-Example:
-User: "Tell me about Fiona and show product categories"
+💡 Answer:
+[Single cohesive synthesis combining insights from all tools to answer the question]
+```
 
-hybrid_search_documents:
-[Full detailed response with extensive quotes from Shrek script about Fiona, showing multiple scenes and dialogue...]
+GUIDELINES:
+- Keep tool results informative but concise
+- Focus the answer section on direct insights
+- Use natural language in the answer, avoid jargon
+- Connect information meaningfully, don't just list facts
 
-get_all_product_categories_from_snowflake:
-[Detailed list of all 15 categories with any relevant details...]
-
-SUMMARY:
-Found character information from Shrek (Fiona's rescue, combat skills, and transformation) and 15 product categories from the database.
-
-Keep individual tool responses DETAILED and COMPREHENSIVE. Only the final summary should be BRIEF.SUMMARY:
-The analysis shows information from two different data sources: character information from documents (Fiona from Shrek) and product catalog data (15 categories). These results address both parts of your query by providing character details and product category information."
-
-Keep your analysis brief and focused on answering the user's question."""
+Keep your responses focused on answering the user's question with meaningful insights."""
                         )
                     ]
                     + state["messages"]
