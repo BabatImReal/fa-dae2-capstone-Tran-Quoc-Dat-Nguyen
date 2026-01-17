@@ -3,14 +3,12 @@
     schema='sc_staging') }}
 
 with source as (
-    select * from {{ ref('products_snapshot') }}
+    select * from {{ source('sc_raw_data', 'olist_products') }}
 ),
 
 renamed as (
     select
-        'snapshot' as source_system,
-        dbt_valid_from as effective_from,
-        dbt_valid_to as effective_to,
+        'csv' as source_system,
         CAST(product_id as VARCHAR) as product_id,
         CAST(product_category_name as VARCHAR) as product_category_name,
         CAST(product_name_length as NUMBER) as product_name_length,
@@ -20,8 +18,7 @@ renamed as (
         CAST(product_length_cm as NUMBER(12, 4)) as product_length_cm,
         CAST(product_height_cm as NUMBER(12, 4)) as product_height_cm,
         CAST(product_width_cm as NUMBER(12, 4)) as product_width_cm,
-        CAST(loaded_at as TIMESTAMP_LTZ) as loaded_at,
-        (dbt_valid_to is null) as is_current
+        CURRENT_TIMESTAMP() as loaded_at
     from source
 )
 

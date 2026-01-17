@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: int__customers
+    description: "Current customer records filtered from customers snapshot. One row per current customer."
+    columns:
+      - name: customer_id
+        description: "Unique customer identifier (primary key)."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_unique_id
+        description: "Unique customer identifier across the platform."
+        tests:
+          - not_null
+
+      - name: customer_zip_code_prefix
+        description: "Customer zip code prefix."
+
+      - name: customer_city
+        description: "Customer city name."
+        tests:
+          - not_null
+
+      - name: customer_state
+        description: "Customer state (2-letter code)."
+        tests:
+          - not_null

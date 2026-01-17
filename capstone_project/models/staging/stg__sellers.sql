@@ -3,20 +3,17 @@
     schema='sc_staging') }}
 
 with source as (
-    select * from {{ ref('sellers_snapshot') }}
+    select * from {{ source('sc_raw_data', 'olist_sellers') }}
 ),
 
 renamed as (
     select
-        'snapshot' as source_system,
-        dbt_valid_from as effective_from,
-        dbt_valid_to as effective_to,
+        'csv' as source_system,
         CAST(seller_id as VARCHAR) as seller_id,
         CAST(seller_zip_code_prefix as VARCHAR) as seller_zip_code_prefix,
         CAST(seller_city as VARCHAR) as seller_city,
         CAST(seller_state as VARCHAR) as seller_state,
-        CAST(loaded_at as TIMESTAMP_LTZ) as loaded_at,
-        (dbt_valid_to is null) as is_current
+        CURRENT_TIMESTAMP() as loaded_at
     from source
 )
 

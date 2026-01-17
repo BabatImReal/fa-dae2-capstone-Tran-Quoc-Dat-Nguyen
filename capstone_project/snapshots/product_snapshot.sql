@@ -18,6 +18,7 @@
         product_length_cm,
         product_height_cm,
         product_width_cm,
-        loaded_at
-    from {{ source('sc_raw_data', 'olist_products') }}
+        loaded_at,
+        source_system
+    from {{ ref('stg__products') }}
 {% endsnapshot %}

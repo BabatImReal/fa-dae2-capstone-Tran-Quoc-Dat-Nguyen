@@ -14,6 +14,7 @@
         payment_type,
         payment_installments,
         payment_value,
-        loaded_at
-    from {{ source('sc_raw_data', 'olist_order_payments') }}
+        loaded_at,
+        source_system
+    from {{ ref('stg__order_payments') }}
 {% endsnapshot %}

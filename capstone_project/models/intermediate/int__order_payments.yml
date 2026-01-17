@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: int__order_payments
+    description: "Current order payment records filtered from order payments snapshot. One row per current payment."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - payment_sequential
+    columns:
+      - name: order_id
+        description: "Order associated with this payment."
+        tests:
+          - not_null
+
+      - name: payment_sequential
+        description: "Sequential payment number for this order."
+        tests:
+          - not_null
+
+      - name: payment_type
+        description: "Type of payment method."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - credit_card
+                - boleto
+                - voucher
+                - debit_card
+                - not_defined
+
+      - name: payment_installments
+        description: "Number of payment installments."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 24
+              inclusive: true
+
+      - name: payment_value
+        description: "Payment amount."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true

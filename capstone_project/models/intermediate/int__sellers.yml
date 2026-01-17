@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: int__sellers
+    description: "Current seller records filtered from sellers snapshot. One row per current seller."
+    columns:
+      - name: seller_id
+        description: "Unique seller identifier (primary key)."
+        tests:
+          - not_null
+          - unique
+
+      - name: seller_zip_code_prefix
+        description: "Seller zip code prefix."
+
+      - name: seller_city
+        description: "Seller city name."
+        tests:
+          - not_null
+
+      - name: seller_state
+        description: "Seller state (2-letter code)."
+        tests:
+          - not_null

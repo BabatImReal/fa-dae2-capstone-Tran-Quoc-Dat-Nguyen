@@ -1,8 +1,22 @@
 {{ config(materialized='ephemeral') }}
 
 with products as (
-    select *
-    from {{ ref('stg__products') }}
+    select
+        product_id,
+        product_category_name,
+        product_name_length,
+        product_description_length,
+        product_photos_qty,
+        product_weight_g,
+        product_length_cm,
+        product_height_cm,
+        product_width_cm,
+        loaded_at,
+        source_system,
+        dbt_valid_from,
+        dbt_valid_to
+    from {{ ref('products_snapshot') }}
+    where dbt_valid_to is null  -- Get only current records
 ),
 
 product_category_translation as (

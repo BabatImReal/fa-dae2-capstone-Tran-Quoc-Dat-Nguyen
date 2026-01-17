@@ -16,6 +16,7 @@
         review_comment_message,
         review_creation_date,
         review_answer_timestamp,
-        loaded_at
-    from {{ source('sc_raw_data', 'olist_order_reviews') }}
+        loaded_at,
+        source_system
+    from {{ ref('stg__order_reviews') }}
 {% endsnapshot %}

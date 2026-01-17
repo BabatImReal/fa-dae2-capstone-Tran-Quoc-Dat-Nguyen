@@ -15,10 +15,10 @@ with stg_products as (
         product_height_cm,
         product_width_cm,
         loaded_at,
-        is_current,
-        effective_from,
-        effective_to
-    from {{ ref('stg__products') }}
+        dbt_valid_from as effective_from,
+        dbt_valid_to as effective_to,
+        (dbt_valid_to is null) as is_current
+    from {{ ref('int__products') }}
 ),
 
 int_products as (

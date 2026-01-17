@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: int__order_reviews
+    description: "Current order review records filtered from order reviews snapshot. One row per current review."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - review_id
+            - order_id
+    columns:
+      - name: review_id
+        description: "Unique review identifier."
+        tests:
+          - not_null
+
+      - name: order_id
+        description: "Order being reviewed."
+        tests:
+          - not_null
+
+      - name: review_score
+        description: "Review score (1-5)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 5
+              inclusive: true
+
+      - name: review_creation_date
+        description: "Date when review was created."
+
+      - name: review_answer_timestamp
+        description: "Timestamp when review was answered."

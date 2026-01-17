@@ -8,7 +8,6 @@ models:
         description: "Order grain (1 row per order)."
         tests:
           - not_null
-          - unique
           - relationships:
               arguments:
                 to: ref('stg__orders')

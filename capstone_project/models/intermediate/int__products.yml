@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: int__products
+    description: "Current product records filtered from products snapshot with English category translation. Only includes products with valid attributes."
+    columns:
+      - name: product_id
+        description: "Unique product identifier (primary key)."
+        tests:
+          - not_null
+          - unique
+
+      - name: product_category_name_english
+        description: "Product category name in English (translated)."
+        tests:
+          - not_null
+
+      - name: product_name_length
+        description: "Length of product name."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1000
+              inclusive: true
+
+      - name: product_weight_g
+        description: "Product weight in grams."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+      - name: product_length_cm
+        description: "Product length in centimeters."
+        tests:
+          - not_null
+
+      - name: product_height_cm
+        description: "Product height in centimeters."
+        tests:
+          - not_null
+
+      - name: product_width_cm
+        description: "Product width in centimeters."
+        tests:
+          - not_null

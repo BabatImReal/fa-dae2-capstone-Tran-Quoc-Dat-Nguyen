@@ -2,26 +2,21 @@ version: 2
 
 models:
   - name: stg__order_reviews
-    description: "Staged olist_order_reviews with SCD Type 2 history"
+    description: "Staged olist_order_reviews from raw source"
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - review_id
             - order_id
-            - effective_from
     columns:
       - name: review_id
-        description: "Natural key (composite) - not unique due to SCD Type 2"
+        description: "Review identifier"
         tests:
           - not_null
       - name: order_id
-        description: "Natural key (composite) - not unique due to SCD Type 2"
+        description: "Order identifier"
         tests:
           - not_null
-          - relationships:
-              to: ref('stg__orders')
-              field: order_id
-              where: "is_current = true"  # Only check current records
       - name: review_score
         tests:
           - not_null
@@ -31,13 +26,13 @@ models:
                 max_value: 5
       - name: review_creation_date
       - name: review_answer_timestamp
-      - name: is_current
-        description: "Boolean flag indicating if this is the current version"
+      - name: source_system
+        description: "Source system identifier"
         tests:
           - not_null
-      - name: effective_from
-        description: "Timestamp when this version became effective"
+          - accepted_values:
+              values: ['csv']
+      - name: loaded_at
+        description: "Timestamp when the record was loaded"
         tests:
           - not_null
-      - name: effective_to
-        description: "Timestamp when this version was superseded (NULL for current)"

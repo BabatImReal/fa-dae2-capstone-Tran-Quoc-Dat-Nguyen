@@ -24,5 +24,5 @@
         freight_value,
         loaded_at,
         source_system
-    from {{ source('sc_raw_data', 'olist_order_items') }}
+    from {{ ref('stg__order_items') }}
 {% endsnapshot %}

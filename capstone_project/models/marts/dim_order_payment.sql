@@ -12,10 +12,10 @@ with payments as (
         payment_installments,
         payment_value,
         loaded_at,
-        is_current,
-        effective_from,
-        effective_to
-    from {{ ref('stg__order_payments') }}
+        dbt_valid_from as effective_from,
+        dbt_valid_to as effective_to,
+        (dbt_valid_to is null) as is_current
+    from {{ ref('int__order_payments') }}
 ),
 
 -- totals by type per order to pick a primary method

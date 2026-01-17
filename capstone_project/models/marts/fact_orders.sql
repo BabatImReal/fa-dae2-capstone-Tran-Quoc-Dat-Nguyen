@@ -205,3 +205,5 @@ left join dim_date as d_estimated
             from {{ this }}
         )
 {% endif %}
+
+qualify row_number() over (partition by o.order_id, ioi.product_id, ioi.seller_id order by o.loaded_at desc) = 1

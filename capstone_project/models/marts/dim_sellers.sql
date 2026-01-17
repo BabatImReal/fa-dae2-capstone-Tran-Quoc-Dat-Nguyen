@@ -5,8 +5,16 @@
 ) }}
 
 with snapshot_src as (
-    select *
-    from {{ ref('stg__sellers') }}
+    select
+        seller_id,
+        seller_zip_code_prefix,
+        seller_city,
+        seller_state,
+        dbt_valid_from as effective_from,
+        dbt_valid_to as effective_to,
+        loaded_at,
+        (dbt_valid_to is null) as is_current
+    from {{ ref('int__sellers') }}
 )
 
 select

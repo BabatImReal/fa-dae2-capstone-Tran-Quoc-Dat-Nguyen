@@ -5,8 +5,17 @@
 ) }}
 
 with src as (
-    select *
-    from {{ ref('stg__order_reviews') }}
+    select
+        review_id,
+        order_id,
+        review_score,
+        review_creation_date,
+        review_answer_timestamp,
+        loaded_at,
+        dbt_valid_from as effective_from,
+        dbt_valid_to as effective_to,
+        (dbt_valid_to is null) as is_current
+    from {{ ref('int__order_reviews') }}
 )
 
 select

@@ -13,6 +13,7 @@
         seller_zip_code_prefix,
         seller_city,
         seller_state,
-        loaded_at
-    from {{ source('sc_raw_data', 'olist_sellers') }}
+        loaded_at,
+        source_system
+    from {{ ref('stg__sellers') }}
 {% endsnapshot %}

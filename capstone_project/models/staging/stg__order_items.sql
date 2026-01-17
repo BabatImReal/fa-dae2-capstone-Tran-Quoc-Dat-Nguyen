@@ -3,7 +3,7 @@
     schema='sc_staging') }}
 
 with source as (
-    select * from {{ ref('order_items_snapshot') }}
+    select * from {{ source('sc_raw_data', 'olist_order_items') }}
 ),
 
 renamed as (

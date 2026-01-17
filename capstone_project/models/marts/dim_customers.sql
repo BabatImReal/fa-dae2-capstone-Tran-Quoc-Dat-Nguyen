@@ -11,11 +11,11 @@ with snap as (
         customer_zip_code_prefix,
         customer_city,
         customer_state,
-        effective_from,
-        effective_to,
+        dbt_valid_from as effective_from,
+        dbt_valid_to as effective_to,
         loaded_at,
-        is_current
-    from {{ ref('stg__customers') }}
+        (dbt_valid_to is null) as is_current
+    from {{ ref('int__customers') }}
 )
 
 select

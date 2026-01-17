@@ -25,8 +25,7 @@
         order_delivered_carrier_date,
         order_delivered_customer_date,
         order_estimated_delivery_date,
-        loaded_at
-        ,
+        loaded_at,
         source_system
-    from {{ source('sc_raw_data', 'olist_orders') }}
+    from {{ ref('stg__orders') }}
 {% endsnapshot %}

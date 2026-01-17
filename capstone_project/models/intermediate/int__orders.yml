@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: int__orders
+    description: "Current order records filtered from orders snapshot. One row per current order."
+    columns:
+      - name: order_id
+        description: "Unique order identifier (primary key)."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Customer who placed the order."
+        tests:
+          - not_null
+
+      - name: order_status
+        description: "Current status of the order."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - created
+                - approved
+                - invoiced
+                - processing
+                - shipped
+                - delivered
+                - canceled
+                - unavailable
+
+      - name: order_purchase_timestamp
+        description: "Timestamp when the order was placed."
+        tests:
+          - not_null

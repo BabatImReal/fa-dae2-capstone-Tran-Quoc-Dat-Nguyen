@@ -2,24 +2,22 @@ version: 2
 
 models:
     - name: stg__products
-      description: "Staged olist_products with SCD Type 2 history"
-      tests:
-        - dbt_utils.unique_combination_of_columns:
-            combination_of_columns:
-              - product_id
-              - effective_from
+      description: "Staged olist_products from raw source. Note: Some products may have null categories - these are filtered out in int__products."
       columns:
         - name: product_id
-          description: "Natural key - not unique due to SCD Type 2"
+          description: "Unique product identifier"
           tests:
             - not_null
-        - name: is_current
-          description: "Boolean flag indicating if this is the current version"
+            - unique
+        - name: product_category_name
+          description: "Product category name (can be null for uncategorized products, filtered in intermediate layer)"
+        - name: source_system
+          description: "Source system identifier"
           tests:
             - not_null
-        - name: effective_from
-          description: "Timestamp when this version became effective"
+            - accepted_values:
+                values: ['csv']
+        - name: loaded_at
+          description: "Timestamp when the record was loaded"
           tests:
             - not_null
-        - name: effective_to
-          description: "Timestamp when this version was superseded (NULL for current)"
