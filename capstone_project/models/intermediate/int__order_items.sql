@@ -28,13 +28,13 @@ joined as (
     select
         o.order_id,
         o.order_status,                 -- keep order grain
-        max(o.customer_id) as customer_id,                     -- representative seller per order
-        min(i.seller_id) as seller_id,                   -- representative product per order
+        cast(max(i.shipping_limit_date) as timestamp_ntz) as shipping_limit_date,                     -- representative seller per order
+        cast((avg(i.price + i.freight_value) * count(i.order_item_id)) as number(38, 8)) as total_order_value,                   -- representative product per order
+        max(o.customer_id) as customer_id,
+        min(i.seller_id) as seller_id,
         min(i.product_id) as product_id,
         max(datediff('day', o.order_purchase_timestamp, o.order_delivered_customer_date)) as shipping_date,
-        cast(max(i.shipping_limit_date) as timestamp_ntz) as shipping_limit_date,
         count(i.order_item_id) as order_qty,
-        cast((avg(i.price + i.freight_value) * count(i.order_item_id)) as number(38,8)) as total_order_value,
         case
             when max(o.order_estimated_delivery_date) is null or max(o.order_delivered_customer_date) is null then null
             when max(o.order_estimated_delivery_date) < max(o.order_delivered_customer_date) then 1
