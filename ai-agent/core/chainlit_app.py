@@ -3,11 +3,14 @@ Chainlit AI Agent for Data Analytics
 Integrates with PostgreSQL and Snowflake databases
 """
 import chainlit as cl
+from chainlit.input_widget import Select, Switch, Slider
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.tools import BaseTool
 from langchain.agents import create_agent, AgentState
 from langgraph.prebuilt import create_react_agent
+from typing import Any, Dict, Optional
 import sys
 from pathlib import Path
 
@@ -16,6 +19,12 @@ project_root = Path(__file__).parent.parent.parent
 ai_agent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(ai_agent_dir))
+
+# Import custom data layer for PostgreSQL persistence
+from core.data_layer import PostgreSQLDataLayer
+
+# Set up data persistence
+cl.data_layer = PostgreSQLDataLayer()
 
 # Import tools
 from tools.postgre_tools import (
@@ -30,17 +39,150 @@ from tools.rag_combined_tools import hybrid_search_documents
 from tools.rag_tools import search_documents
 
 
+# ============================================================================
+# AUTHENTICATION
+# ============================================================================
+
+
+
+@cl.password_auth_callback
+def auth_callback(username: str, password: str) -> Optional[cl.User]:
+    """
+    Authenticate user with username and password
+    
+    Args:
+        username: User's username
+        password: User's password
+        
+    Returns:
+        cl.User object if authentication successful, None otherwise
+    """
+    print(f"🔐 Authentication attempt for user: {username}")
+    
+    # Check if user exists
+    if username not in USERS:
+        print(f"❌ User '{username}' not found")
+        return None
+    
+    user_data = USERS[username]
+    
+    # Verify password
+    print(f"🔍 Debug - Provided password: '{password}' (len={len(password)})")
+    print(f"🔍 Debug - Expected password: '{user_data['password']}' (len={len(user_data['password'])})")
+    
+    if user_data["password"] != password:
+        print(f"❌ Invalid password for user '{username}'")
+        return None
+    
+    print(f"✅ User '{username}' authenticated successfully")
+    
+    # Return User object with metadata
+    return cl.User(
+        identifier=username,
+        metadata={
+            "role": user_data["role"],
+            "display_name": user_data["display_name"],
+            "provider": "credentials"
+        }
+    )
+
+
+# ============================================================================
+# HUMAN-IN-THE-LOOP
+# ============================================================================
+
+# Human-in-the-Loop: Ask for approval before executing tools
+async def ask_tool_approval(tool_name: str, tool_input: Dict[str, Any]) -> bool:
+    """Ask user for approval before executing a tool"""
+    
+    # Format everything in a code block
+    if tool_input:
+        input_lines = "\n".join([f"  - {k}: {v}" for k, v in tool_input.items()])
+        params_section = f"Parameters:\n{input_lines}"
+    else:
+        params_section = "Parameters:\n  (none)"
+    
+    tool_info = f"Tool: {tool_name}\n{params_section}"
+    
+    res = await cl.AskActionMessage(
+        content=f"🔧 **Tool Execution Request**\n\n"
+                f"```\n{tool_info}\n```\n\n"
+                f"Do you want to execute this tool?",
+        actions=[
+            cl.Action(name="approve", payload={"approved": True}, label="✅ Approve"),
+            cl.Action(name="reject", payload={"approved": False}, label="❌ Reject"),
+        ],
+        timeout=120,  # 2 minutes timeout
+    ).send()
+    
+    if res and res.get("payload", {}).get("approved"):
+        await cl.Message(content="✅ Tool execution approved.").send()
+        return True
+    else:
+        await cl.Message(content="❌ Tool execution rejected.").send()
+        return False
+
+
 @cl.on_chat_start
 async def start():
     """Initialize the chat session with AI agent"""
     
-    # Welcome message
+    # Set up chat settings
+    settings = await cl.ChatSettings(
+        [
+            Select(
+                id="Model",
+                label="OpenAI Model",
+                values=["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
+                initial_index=0,
+            ),
+            Switch(
+                id="Streaming", 
+                label="Stream Responses", 
+                initial=True
+            ),
+            Switch(
+                id="HITL",
+                label="Human-in-the-Loop (Approve Tools)",
+                initial=True,
+                description="Ask for approval before executing tools"
+            ),
+            Slider(
+                id="Temperature",
+                label="Temperature",
+                initial=0,
+                min=0,
+                max=2,
+                step=0.1,
+                description="Controls randomness: 0 is focused, 2 is creative",
+            ),
+        ]
+    ).send()
+    
+    # Store initial settings
+    cl.user_session.set("settings", {
+        "Model": "gpt-3.5-turbo",
+        "Streaming": True,
+        "HITL": True,
+        "Temperature": 0,
+    })
+    
+    # Welcome message with user info if authenticated
+    user = cl.user_session.get("user")
+    if user:
+        display_name = user.metadata.get("display_name", user.identifier)
+        welcome_msg = f"👋 Welcome back, **{display_name}**!\n\n🤖 **Data Analytics AI Agent Ready!**\n\n"
+    else:
+        welcome_msg = "🤖 **Data Analytics AI Agent Ready!**\n\n"
+    
     await cl.Message(
-        content="🤖 **Data Analytics AI Agent Ready!**\n\n"
+        content=welcome_msg +
                 "I can help you analyze data from:\n"
                 "- 📊 **PostgreSQL** - Staging data\n"
                 "- ❄️ **Snowflake** - Data warehouse\n"
                 "- 📚 **Documents** - Search project documentation\n\n"
+                "💡 **Tip:** Click the settings icon ⚙️ to customize the model, temperature, and streaming.\n\n"
+                "📜 Your conversations are automatically saved - access them from the sidebar!\n\n"
                 "Ask me anything about products, customers, sales, revenue trends, or search the documentation!"
     ).send()
     
@@ -57,11 +199,18 @@ async def start():
         search_documents,  # Simple semantic search
     ]
     
-    # Initialize LLM
+    # Get settings from session
+    settings = cl.user_session.get("settings", {
+        "Model": "gpt-3.5-turbo",
+        "Streaming": True,
+        "Temperature": 0,
+    })
+    
+    # Initialize LLM with user settings
     llm = ChatOpenAI(
-        temperature=0,
-        model="gpt-3.5-turbo",  # or "gpt-4" for better performance
-        streaming=True
+        temperature=settings["Temperature"],
+        model=settings["Model"],
+        streaming=settings["Streaming"]
     )
     
     # System prompt
@@ -193,33 +342,61 @@ Keep your responses focused on answering the user's question with meaningful ins
 
 @cl.on_message
 async def main(message: cl.Message):
-    """Handle incoming user messages"""
+    """Handle incoming user messages with optional Human-in-the-Loop for tool execution"""
     
     agent = cl.user_session.get("agent")
     chat_history = cl.user_session.get("chat_history", [])
+    settings = cl.user_session.get("settings", {"HITL": True})
+    hitl_enabled = settings.get("HITL", True)
     
     # Create a message to stream the response
     msg = cl.Message(content="")
     await msg.send()
     
-    # Run agent with streaming
     try:
-        # LangGraph agents use "messages" key instead of "input"
-        response = await agent.ainvoke({
-            "messages": chat_history + [HumanMessage(content=message.content)]
-        })
+        # Stream agent execution with optional HITL
+        all_messages = chat_history + [HumanMessage(content=message.content)]
         
-        # Extract the last message from agent response
-        agent_message = response["messages"][-1].content
+        async for event in agent.astream({"messages": all_messages}, stream_mode="values"):
+            messages = event.get("messages", [])
+            
+            if not messages:
+                continue
+                
+            last_message = messages[-1]
+            
+            # Check if the last message contains tool calls and HITL is enabled
+            if hitl_enabled and hasattr(last_message, "tool_calls") and last_message.tool_calls:
+                for tool_call in last_message.tool_calls:
+                    tool_name = tool_call.get("name", "unknown")
+                    tool_input = tool_call.get("args", {})
+                    
+                    # Ask for approval before executing tool
+                    approved = await ask_tool_approval(tool_name, tool_input)
+                    
+                    if not approved:
+                        # If rejected, send a message and stop execution
+                        msg.content = f"🚫 Tool execution cancelled by user.\n\nThe agent wanted to use `{tool_name}` but you rejected it.\n\nPlease provide different instructions or allow tool execution."
+                        await msg.update()
+                        return
+            
+            # Update message with agent's response (non-tool messages)
+            if hasattr(last_message, "content") and isinstance(last_message.content, str):
+                if last_message.content and not hasattr(last_message, "tool_calls"):
+                    msg.content = last_message.content
+                    await msg.update()
         
-        # Update message with final response
-        msg.content = agent_message
-        await msg.update()
-        
-        # Update chat history
-        chat_history.append(HumanMessage(content=message.content))
-        chat_history.append(AIMessage(content=agent_message))
-        cl.user_session.set("chat_history", chat_history)
+        # Get final response
+        final_messages = event.get("messages", [])
+        if final_messages:
+            agent_message = final_messages[-1].content
+            msg.content = agent_message
+            await msg.update()
+            
+            # Update chat history
+            chat_history.append(HumanMessage(content=message.content))
+            chat_history.append(AIMessage(content=agent_message))
+            cl.user_session.set("chat_history", chat_history)
         
     except Exception as e:
         error_msg = f"❌ **Error occurred:**\n```\n{str(e)}\n```\n\nPlease try rephrasing your question or check if the databases are accessible."
@@ -227,7 +404,36 @@ async def main(message: cl.Message):
         await msg.update()
 
 
+@cl.on_settings_update
+async def update_settings(settings):
+    """Handle settings updates"""
+    print(f"⚙️ Settings updated: {settings}")
+    
+    # Store updated settings
+    cl.user_session.set("settings", settings)
+    
+    # Recreate agent with new settings
+    await start()
+    
+    # Notify user
+    await cl.Message(
+        content=f"✅ **Settings Updated!**\n\n"
+                f"- Model: `{settings['Model']}`\n"
+                f"- Temperature: `{settings['Temperature']}`\n"
+                f"- Streaming: `{settings['Streaming']}`\n"
+                f"- Human-in-the-Loop: `{settings.get('HITL', True)}`"
+    ).send()
+
+
+@cl.on_stop
+async def on_stop():
+    """Handle when user clicks stop button during task execution"""
+    print("⏸️ User requested to stop the task")
+    await cl.Message(content="⏸️ Task stopped by user.").send()
+
+
 @cl.on_chat_end
 async def end():
     """Clean up when chat ends"""
-    await cl.Message(content="👋 Thanks for using the Data Analytics AI Agent!").send()
+    print("👋 Chat session ended")
+

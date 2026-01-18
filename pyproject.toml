@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "alembic>=1.17.1",
+    "asyncpg>=0.30.0",
     "chainlit>=2.9.5",
     "confluent-kafka>=2.12.1",
     "dbt-core>=1.10.13",
@@ -21,7 +23,9 @@ dependencies = [
     "pdfplumber>=0.11.8",
     "pinecone>=8.0.0",
     "polars>=1.33.0",
-    "psycopg[binary]>=3.2.10",
+    "psycopg-binary>=3.2.10",
+    "psycopg2-binary>=2.9.11",
+    "psycopg[binary,pool]>=3.2.10",
     "pymupdf>=1.26.7",
     "python-docx>=1.2.0",
     "python-dotenv>=1.1.1",
@@ -29,6 +33,7 @@ dependencies = [
     "requests>=2.32.5",
     "rich>=14.1.0",
     "snowflake-connector-python[pandas]>=3.17.3",
+    "sqlalchemy>=1.4.54",
     "streamlit>=1.51.0",
 ]
 

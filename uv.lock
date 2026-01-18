@@ -1360,6 +1360,8 @@ name = "fa-dae2-capstone-tran-quoc-dat-nguyen"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
     { name = "chainlit" },
     { name = "confluent-kafka" },
     { name = "dbt-core" },
@@ -1376,7 +1378,9 @@ dependencies = [
     { name = "pdfplumber" },
     { name = "pinecone" },
     { name = "polars" },
-    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg", extra = ["binary", "pool"] },
+    { name = "psycopg-binary" },
+    { name = "psycopg2-binary" },
     { name = "pymupdf" },
     { name = "python-docx" },
     { name = "python-dotenv" },
@@ -1384,6 +1388,7 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "snowflake-connector-python", extra = ["pandas"] },
+    { name = "sqlalchemy" },
     { name = "streamlit" },
 ]
 
@@ -1405,6 +1410,8 @@ pr-ci = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alembic", specifier = ">=1.17.1" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "chainlit", specifier = ">=2.9.5" },
     { name = "confluent-kafka", specifier = ">=2.12.1" },
     { name = "dbt-core", specifier = ">=1.10.13" },
@@ -1421,7 +1428,9 @@ requires-dist = [
     { name = "pdfplumber", specifier = ">=0.11.8" },
     { name = "pinecone", specifier = ">=8.0.0" },
     { name = "polars", specifier = ">=1.33.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.10" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.10" },
+    { name = "psycopg-binary", specifier = ">=3.2.10" },
+    { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "pymupdf", specifier = ">=1.26.7" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
@@ -1429,6 +1438,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.5" },
     { name = "rich", specifier = ">=14.1.0" },
     { name = "snowflake-connector-python", extras = ["pandas"], specifier = ">=3.17.3" },
+    { name = "sqlalchemy", specifier = ">=1.4.54" },
     { name = "streamlit", specifier = ">=1.51.0" },
 ]
 
@@ -4509,6 +4519,9 @@ wheels = [
 [package.optional-dependencies]
 binary = [
     { name = "psycopg-binary", marker = "implementation_name != 'pypy'" },
+]
+pool = [
+    { name = "psycopg-pool" },
 ]
 
 [[package]]

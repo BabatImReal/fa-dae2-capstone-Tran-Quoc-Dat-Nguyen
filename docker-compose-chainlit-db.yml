@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  chainlit-postgres:
+    image: postgres:16
+    container_name: chainlit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CHAINLIT_POSTGRE_USER}
+      POSTGRES_PASSWORD: ${CHAINLIT_POSTGRE_PASSWORD}
+      POSTGRES_DB: ${CHAINLIT_POSTGRES_DB}
+    ports:
+      - "5434:5432"
+    volumes:
+      - chainlit_postgres_data:/var/lib/postgresql/data
+      - ./postgres-lab/sql/chainlit_init.sql:/docker-entrypoint-initdb.d/chainlit_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chainlit -d chainlit_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  chainlit_postgres_data:
+    driver: local
