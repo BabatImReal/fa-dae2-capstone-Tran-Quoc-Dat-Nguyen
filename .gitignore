@@ -25,6 +25,12 @@ data/models/
 .env.local
 .env.production
 
+# User credentials and secrets
+*.secret
+*.password
+users.json
+credentials.json
+
 # Logs
 *.log
 logs/

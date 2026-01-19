@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   chainlit-postgres:
-    image: postgres:16
+    image: postgres:15-alpine
     container_name: chainlit-postgres
     restart: unless-stopped
     environment:

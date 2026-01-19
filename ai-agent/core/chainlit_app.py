@@ -2,17 +2,24 @@
 Chainlit AI Agent for Data Analytics
 Integrates with PostgreSQL and Snowflake databases
 """
+import os
 import chainlit as cl
 from chainlit.input_widget import Select, Switch, Slider
+from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tools import BaseTool
 from langchain.agents import create_agent, AgentState
 from langgraph.prebuilt import create_react_agent
+
 from typing import Any, Dict, Optional
 import sys
 from pathlib import Path
+
+import asyncpg
+import hashlib
+import json
 
 # Add project root and ai-agent to path
 project_root = Path(__file__).parent.parent.parent
@@ -20,11 +27,15 @@ ai_agent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(ai_agent_dir))
 
-# Import custom data layer for PostgreSQL persistence
-from core.data_layer import PostgreSQLDataLayer
-
-# Set up data persistence
-cl.data_layer = PostgreSQLDataLayer()
+# Set up data persistence with SQLAlchemy
+@cl.data_layer
+def get_data_layer():
+    return SQLAlchemyDataLayer(
+        conninfo=os.getenv(
+            "CHAINLIT_POSTGRES_URL",
+            "postgresql+asyncpg://chainlit:chainlit_password@localhost:5434/chainlit_db"
+        )
+    )
 
 # Import tools
 from tools.postgre_tools import (
@@ -43,12 +54,52 @@ from tools.rag_tools import search_documents
 # AUTHENTICATION
 # ============================================================================
 
+<<<<<<< HEAD
+=======
+
+def hash_password(password: str) -> str:
+    """Hash a password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+async def get_user_from_db(username: str) -> Optional[dict]:
+    """
+    Retrieve user from database
+    
+    Args:
+        username: User's username
+        
+    Returns:
+        User data dict or None
+    """
+    db_url = os.getenv(
+        "CHAINLIT_POSTGRES_URL"
+    ).replace("postgresql+asyncpg://", "postgresql://")
+    
+    try:
+        conn = await asyncpg.connect(db_url)
+        row = await conn.fetchrow(
+            "SELECT identifier, metadata FROM users WHERE identifier = $1",
+            username
+        )
+        await conn.close()
+        
+        if row:
+            return {
+                "identifier": row["identifier"],
+                "metadata": json.loads(row["metadata"]) if row["metadata"] else {}
+            }
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+    
+    return None
+>>>>>>> 4d35196 (feat: add user management script with user creation and listing functionality)
 
 
 @cl.password_auth_callback
-def auth_callback(username: str, password: str) -> Optional[cl.User]:
+async def auth_callback(username: str, password: str) -> Optional[cl.User]:
     """
-    Authenticate user with username and password
+    Authenticate user with username and password from database
     
     Args:
         username: User's username
@@ -59,31 +110,27 @@ def auth_callback(username: str, password: str) -> Optional[cl.User]:
     """
     print(f"🔐 Authentication attempt for user: {username}")
     
-    # Check if user exists
-    if username not in USERS:
+    # Get user from database
+    user_data = await get_user_from_db(username)
+    
+    if not user_data:
         print(f"❌ User '{username}' not found")
         return None
     
-    user_data = USERS[username]
-    
-    # Verify password
-    print(f"🔍 Debug - Provided password: '{password}' (len={len(password)})")
-    print(f"🔍 Debug - Expected password: '{user_data['password']}' (len={len(user_data['password'])})")
-    
-    if user_data["password"] != password:
+    # Verify password hash
+    stored_password_hash = user_data["metadata"].get("password_hash")
+    if not stored_password_hash or hash_password(password) != stored_password_hash:
         print(f"❌ Invalid password for user '{username}'")
         return None
     
     print(f"✅ User '{username}' authenticated successfully")
     
-    # Return User object with metadata
+    # Return User object with metadata (without password hash)
+    metadata = {k: v for k, v in user_data["metadata"].items() if k != "password_hash"}
+    
     return cl.User(
         identifier=username,
-        metadata={
-            "role": user_data["role"],
-            "display_name": user_data["display_name"],
-            "provider": "credentials"
-        }
+        metadata=metadata
     )
 
 
@@ -430,6 +477,61 @@ async def on_stop():
     """Handle when user clicks stop button during task execution"""
     print("⏸️ User requested to stop the task")
     await cl.Message(content="⏸️ Task stopped by user.").send()
+
+
+@cl.on_chat_resume
+async def on_chat_resume(thread: dict):
+    """
+    Resume a previous conversation thread
+    
+    Args:
+        thread: Dictionary containing thread metadata and message history
+    """
+    print(f"🔄 Resuming chat thread: {thread.get('id')}")
+    
+    # Restore chat history from thread
+    chat_history = []
+    
+    # Get the thread steps/messages
+    if "steps" in thread:
+        for step in thread["steps"]:
+            step_type = step.get("type")
+            
+            # Restore user messages
+            if step_type == "user_message":
+                chat_history.append(HumanMessage(content=step.get("output", "")))
+            
+            # Restore assistant messages
+            elif step_type == "assistant_message":
+                chat_history.append(AIMessage(content=step.get("output", "")))
+    
+    # Store restored chat history in session
+    cl.user_session.set("chat_history", chat_history)
+    
+    # Restore settings if they exist in thread metadata
+    settings = thread.get("metadata", {}).get("settings")
+    if settings:
+        cl.user_session.set("settings", settings)
+    else:
+        # Use default settings
+        settings = {
+            "Model": "gpt-4o-mini",
+            "Temperature": 0.7,
+            "Streaming": True,
+            "HITL": True
+        }
+        cl.user_session.set("settings", settings)
+    
+    # Recreate the agent with restored settings
+    await start()
+    
+    # Send welcome back message
+    message_count = len([s for s in thread.get("steps", []) if s.get("type") == "user_message"])
+    await cl.Message(
+        content=f"👋 **Welcome back!**\n\n"
+                f"Resumed conversation with {message_count} previous messages.\n"
+                f"You can continue where you left off!"
+    ).send()
 
 
 @cl.on_chat_end

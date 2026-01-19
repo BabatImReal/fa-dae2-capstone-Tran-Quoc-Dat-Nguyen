@@ -1,17 +1,61 @@
 """
 Authentication callback for Chainlit
-Simple username/password authentication with user persistence
+Database-backed authentication with password hashing
 """
 import chainlit as cl
+import asyncpg
+import os
+import hashlib
 from typing import Optional
 
 
+<<<<<<< HEAD
+=======
+def hash_password(password: str) -> str:
+    """Hash a password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+async def get_user_from_db(username: str) -> Optional[dict]:
+    """
+    Retrieve user from database
+    
+    Args:
+        username: User's username
+        
+    Returns:
+        User data dict or None
+    """
+    db_url = os.getenv(
+        "CHAINLIT_POSTGRES_URL",
+        "postgresql://chainlit:chainlit_password@localhost:5434/chainlit_db"
+    ).replace("postgresql+asyncpg://", "postgresql://")
+    
+    try:
+        conn = await asyncpg.connect(db_url)
+        row = await conn.fetchrow(
+            "SELECT identifier, metadata FROM users WHERE identifier = $1",
+            username
+        )
+        await conn.close()
+        
+        if row:
+            import json
+            return {
+                "identifier": row["identifier"],
+                "metadata": json.loads(row["metadata"]) if row["metadata"] else {}
+            }
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+    
+    return None
+>>>>>>> 4d35196 (feat: add user management script with user creation and listing functionality)
 
 
 @cl.password_auth_callback
-def auth_callback(username: str, password: str) -> Optional[cl.User]:
+async def auth_callback(username: str, password: str) -> Optional[cl.User]:
     """
-    Authenticate user with username and password
+    Authenticate user with username and password from database
     
     Args:
         username: User's username
@@ -22,28 +66,27 @@ def auth_callback(username: str, password: str) -> Optional[cl.User]:
     """
     print(f"🔐 Authentication attempt for user: {username}")
     
-    # Check if user exists
-    if username not in USERS:
+    # Get user from database
+    user_data = await get_user_from_db(username)
+    
+    if not user_data:
         print(f"❌ User '{username}' not found")
         return None
     
-    user_data = USERS[username]
-    
-    # Verify password
-    if user_data["password"] != password:
+    # Verify password hash
+    stored_password_hash = user_data["metadata"].get("password_hash")
+    if not stored_password_hash or hash_password(password) != stored_password_hash:
         print(f"❌ Invalid password for user '{username}'")
         return None
     
     print(f"✅ User '{username}' authenticated successfully")
     
-    # Return User object with metadata
+    # Return User object with metadata (without password hash)
+    metadata = {k: v for k, v in user_data["metadata"].items() if k != "password_hash"}
+    
     return cl.User(
         identifier=username,
-        metadata={
-            "role": user_data["role"],
-            "display_name": user_data["display_name"],
-            "provider": "credentials"
-        }
+        metadata=metadata
     )
 
 
