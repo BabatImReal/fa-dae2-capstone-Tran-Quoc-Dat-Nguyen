@@ -32,8 +32,7 @@ sys.path.insert(0, str(ai_agent_dir))
 def get_data_layer():
     return SQLAlchemyDataLayer(
         conninfo=os.getenv(
-            "CHAINLIT_POSTGRES_URL",
-            "postgresql+asyncpg://chainlit:chainlit_password@localhost:5434/chainlit_db"
+            "CHAINLIT_POSTGRES_URL"
         )
     )
 
@@ -54,8 +53,6 @@ from tools.rag_tools import search_documents
 # AUTHENTICATION
 # ============================================================================
 
-<<<<<<< HEAD
-=======
 
 def hash_password(password: str) -> str:
     """Hash a password using SHA-256"""
@@ -93,7 +90,6 @@ async def get_user_from_db(username: str) -> Optional[dict]:
         print(f"❌ Database error: {e}")
     
     return None
->>>>>>> 4d35196 (feat: add user management script with user creation and listing functionality)
 
 
 @cl.password_auth_callback

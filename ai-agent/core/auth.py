@@ -6,11 +6,10 @@ import chainlit as cl
 import asyncpg
 import os
 import hashlib
+import json
 from typing import Optional
 
 
-<<<<<<< HEAD
-=======
 def hash_password(password: str) -> str:
     """Hash a password using SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
@@ -27,8 +26,7 @@ async def get_user_from_db(username: str) -> Optional[dict]:
         User data dict or None
     """
     db_url = os.getenv(
-        "CHAINLIT_POSTGRES_URL",
-        "postgresql://chainlit:chainlit_password@localhost:5434/chainlit_db"
+        "CHAINLIT_POSTGRES_URL"
     ).replace("postgresql+asyncpg://", "postgresql://")
     
     try:
@@ -40,7 +38,6 @@ async def get_user_from_db(username: str) -> Optional[dict]:
         await conn.close()
         
         if row:
-            import json
             return {
                 "identifier": row["identifier"],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else {}
@@ -49,7 +46,8 @@ async def get_user_from_db(username: str) -> Optional[dict]:
         print(f"❌ Database error: {e}")
     
     return None
->>>>>>> 4d35196 (feat: add user management script with user creation and listing functionality)
+
+
 
 
 @cl.password_auth_callback

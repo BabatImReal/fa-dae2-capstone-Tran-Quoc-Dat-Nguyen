@@ -27,8 +27,11 @@ async def create_user(username: str, password: str, display_name: str, role: str
     
     # Database connection
     db_url = os.getenv(
-        "CHAINLIT_POSTGRES_URL"
-    ).replace("postgresql+asyncpg://", "postgresql://")
+        "CHAINLIT_POSTGRES_URL",
+        "postgresql://chainlit:chainlit_password@localhost:5434/chainlit_db"
+    )
+    if db_url and "postgresql+asyncpg://" in db_url:
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
     
     try:
         conn = await asyncpg.connect(db_url)
@@ -68,8 +71,7 @@ async def list_users():
     """List all users in the database"""
     
     db_url = os.getenv(
-        "CHAINLIT_POSTGRES_URL",
-        "postgresql://chainlit:chainlit_password@localhost:5434/chainlit_db"
+        "CHAINLIT_POSTGRES_URL"
     ).replace("postgresql+asyncpg://", "postgresql://")
     
     try:
