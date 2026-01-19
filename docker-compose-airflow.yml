@@ -12,6 +12,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-apiserver:8080/execution/"
+    AIRFLOW__API__BASE_URL: "http://airflow-webserver:8080"
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     # Timezone Configuration
     AIRFLOW__CORE__DEFAULT_TIMEZONE: Asia/Bangkok

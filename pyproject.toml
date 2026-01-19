@@ -91,3 +91,47 @@ ignore = [
 known-first-party = ["config", "scripts", "dagster_orchestrator"]
 force-sort-within-sections = true
 combine-as-imports = true
+
+[tool.pytest.ini_options]
+# Pytest configuration for Chainlit app testing
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "-v",                      # Verbose output
+    "--tb=short",              # Shorter traceback format
+    "--strict-markers",        # Strict marker checking
+    "-ra",                     # Show summary of all test outcomes
+    "--color=yes",             # Colorized output
+]
+
+[tool.coverage.run]
+source = ["ai-agent"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
