@@ -51,9 +51,9 @@ def batch_data_transformation():
     ### Batch Data Transformation DAG
 
     Transforms raw data using dbt build command which:
-    1. **Snapshots**: Captures point-in-time data for dimension tracking
-    2. **Models**: Runs staging and marts transformations
-    3. **Tests**: Validates data quality
+    1. **Models**: Runs staging, snapshots, intermediate, and marts transformations
+    2. **Tests**: Validates data quality
+    3. **Snapshots**: Captures point-in-time data (included in dbt build)
 
     **Dependencies**: Data must be loaded in Snowflake (from batch_data_ingestion DAG)
     **Inputs**: Raw data in SC_RAW_DATA schema
@@ -61,21 +61,23 @@ def batch_data_transformation():
     """
 
     @task.bash(env={**get_dbt_snowflake_env_vars()}, cwd="/opt/airflow/capstone_project")
-    def dbt_snapshot() -> str:
+    def dbt_build() -> str:
         """
-        #### dbt Snapshot Task
-        Runs dbt snapshot to capture slowly changing dimensions.
+        #### dbt Build Task
+        Runs dbt build to execute snapshots, models, and tests in dependency order.
 
-        Creates point-in-time snapshots of dimension tables with:
-        - dbt_valid_from: When the record became active
-        - dbt_valid_to: When the record was superseded (null if current)
-        - dbt_scd_id: Unique identifier for the snapshot record
-        - dbt_updated_at: Timestamp of last update
+        dbt build:
+        - Cleans and installs dependencies
+        - Runs staging models to clean and normalize raw data
+        - Creates snapshots for slowly changing dimensions
+        - Builds intermediate models
+        - Builds marts layer for analytics-ready tables
+        - Executes tests to validate data quality
         """
         return """
         set -e  # Exit on error
         
-        echo "📸 Starting dbt snapshot process..."
+        echo "🏗️ Starting dbt build process..."
         echo "📂 Working directory: $(pwd)"
         echo "🔧 dbt version: $(dbt --version)"
         echo ""
@@ -86,38 +88,6 @@ def batch_data_transformation():
         
         echo "📦 Installing dbt dependencies..."
         dbt deps
-        echo ""
-        
-        # Run dbt snapshot and capture exit code
-        if dbt snapshot; then
-            echo ""
-            echo "✅ dbt snapshot completed successfully"
-            exit 0
-        else
-            EXIT_CODE=$?
-            echo ""
-            echo "❌ dbt snapshot failed with exit code: $EXIT_CODE"
-            echo "Check the logs above for detailed error messages"
-            exit $EXIT_CODE
-        fi
-        """
-
-    @task.bash(env={**get_dbt_snowflake_env_vars()}, cwd="/opt/airflow/capstone_project")
-    def dbt_build() -> str:
-        """
-        #### dbt Build Task
-        Runs dbt build to execute models and tests in dependency order.
-
-        dbt build:
-        - Runs staging models to clean and normalize raw data
-        - Builds marts layer for analytics-ready tables
-        - Executes tests to validate data quality
-        """
-        return """
-        set -e  # Exit on error
-        
-        echo "🏗️ Starting dbt build process..."
-        echo "📂 Working directory: $(pwd)"
         echo ""
         
         # Run dbt build and capture exit code
@@ -134,8 +104,8 @@ def batch_data_transformation():
         fi
         """
 
-    # Execute tasks in sequence
-    dbt_snapshot() >> dbt_build()
+    # Execute task
+    dbt_build()
 
 
 # Create the DAG instance
