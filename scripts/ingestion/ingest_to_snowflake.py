@@ -142,34 +142,72 @@ def upload_csv_to_stage(csv_file_path: str, stage_fqn: str, overwrite=True) -> b
     return True
 
 
-def delete_stage_files(stage_fqn: str, file_pattern: str = "*") -> bool:
+def delete_stage_files(stage_fqn: str, file_pattern: str = "*", verify: bool = True) -> bool:
     """Delete files from Snowflake stage matching the given pattern.
     
     Args:
         stage_fqn: Full qualified name of the stage (e.g., DB.SCHEMA.STAGE)
         file_pattern: Pattern to match files to delete (default: '*' for all files)
+        verify: Whether to verify deletion by listing stage afterward (default: True)
     
     Returns:
         True on success, False otherwise.
     """
     try:
         stage = sanitize_identifier(stage_fqn)
-        
+
         # Validate file pattern to prevent SQL injection
-        if not re.match(r"^[a-zA-Z0-9._\-*?/\\()|]+$", file_pattern):
+        # Allow: alphanumeric, dots, hyphens, underscores, wildcards (*?), slashes, backslashes,
+        # parentheses, pipes, dollar sign, caret (for regex anchors)
+        if not re.match(r"^[a-zA-Z0-9._\-*?/\\()|$^]+$", file_pattern):
             raise ValueError(f"Invalid file pattern: {file_pattern}")
-        
-        remove_sql = f"REMOVE @{stage}/{file_pattern}"
+
         with get_conn() as conn, conn.cursor() as cur:
+            # List files before deletion (for verification)
+            if verify:
+                cur.execute(f"LIST @{stage}")
+                files_before = cur.fetchall()
+                logger.info(f"📋 Files in stage before deletion: {len(files_before)}")
+            
+            # If the caller requested all files ("*"), use a plain REMOVE which deletes everything
+            # Otherwise use Snowflake's PATTERN clause which accepts a regex. Escape single quotes.
+            safe_pattern = file_pattern or "*"
+            if safe_pattern in ("*", ".*"):
+                remove_sql = f"REMOVE @{stage}"
+            else:
+                esc = safe_pattern.replace("'", "''")
+                remove_sql = f"REMOVE @{stage} PATTERN = '{esc}'"
+
             cur.execute(remove_sql)
+            deleted_files = []
             try:
                 rows = cur.fetchall()
-                logger.info(f"🗑️  Deleted {len(rows)} files from stage {stage} matching pattern '{file_pattern}'")
-                for r in rows:
-                    logger.debug(f"   Removed: {r[0]}")
+                deleted_files = [r[0] for r in rows]
+                logger.info(
+                    f"🗑️  Deleted {len(deleted_files)} files from stage {stage} using pattern '{file_pattern}'"
+                )
+                for filename in deleted_files:
+                    logger.debug(f"   Removed: {filename}")
             except Exception:
                 # Some connectors return no rows
-                logger.info(f"🗑️  Files deleted from stage {stage} matching pattern '{file_pattern}'")
+                logger.info(f"🗑️  Files deleted from stage {stage} using pattern '{file_pattern}'")
+            
+            # Verify deletion by listing stage again
+            if verify:
+                cur.execute(f"LIST @{stage}")
+                files_after = cur.fetchall()
+                logger.info(f"📋 Files in stage after deletion: {len(files_after)}")
+                
+                # If we deleted specific files, verify they're gone
+                if deleted_files and files_after:
+                    remaining_names = {f[0] for f in files_after}
+                    for deleted_file in deleted_files:
+                        if deleted_file in remaining_names:
+                            logger.warning(f"⚠️  File {deleted_file} still exists in stage after deletion!")
+                            return False
+                
+                logger.info(f"✅ Verified: deletion successful")
+        
         return True
     except Exception as e:
         logger.error(f"Failed to delete files from stage {stage_fqn}: {e}")
@@ -262,10 +300,12 @@ def main():
     # Derive a table namespace prefix from the stage/table config
     stage_prefix = STAGE_FQN.split(".")[0] if "." in STAGE_FQN else STAGE_FQN
 
-    # Delete old files from stage before uploading new ones
-    logger.info("🧹 Cleaning up all files from stage...")
-    # remove all files from the stage
-    delete_stage_files(STAGE_FQN)
+    # Delete old files from stage before uploading new ones (with verification)
+    logger.info("🧹 Cleaning up all files from stage before upload...")
+    cleanup_ok = delete_stage_files(STAGE_FQN, file_pattern="*", verify=True)
+    if not cleanup_ok:
+        logger.error("Failed to clean up stage before upload. Aborting.")
+        return
 
     # For each dataset configured in config['columns'], find the matching CSV and load it
     for dataset_name, cols in config.get("columns", {}).items():
@@ -314,6 +354,10 @@ def main():
         except Exception as e:
             logger.error(f"Failed to load {filename} into {target_table}: {e}")
             continue
+
+    # Clean up stage after successful load (optional but recommended)
+    logger.info("🧹 Cleaning up stage after successful load...")
+    delete_stage_files(STAGE_FQN, file_pattern="*", verify=True)
 
     logger.info("✅ CSV ingestion process completed successfully!")
 
