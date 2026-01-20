@@ -9,8 +9,8 @@ import re
 from typing import Any
 import unicodedata
 
-from service.chunking_strategies import chunk_text
-from service.text_extractor import extract_text
+from .chunking_strategies import chunk_text
+from .text_extractor import extract_text
 
 logger = logging.getLogger(__name__)
 

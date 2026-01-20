@@ -27,6 +27,11 @@ ai_agent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(ai_agent_dir))
 
+# Import RAG components for PDF processing
+from rag.service.document_processor import DocumentProcessor
+from rag.embed_and_store import PineconeEmbedder
+from rag.sparse_embedder import SparseEmbedder
+
 # Set up data persistence with SQLAlchemy
 @cl.data_layer
 def get_data_layer():
@@ -166,9 +171,152 @@ async def ask_tool_approval(tool_name: str, tool_input: Dict[str, Any]) -> bool:
         return False
 
 
+# ============================================================================
+# PDF UPLOAD AND PROCESSING
+# ============================================================================
+
+async def process_pdf_upload(file: cl.File) -> Dict[str, Any]:
+    """
+    Process uploaded PDF: extract text, chunk, embed (both dense & sparse), and store in Pinecone
+    
+    Args:
+        file: Uploaded PDF file from Chainlit
+        
+    Returns:
+        Dictionary with processing results
+    """
+    try:
+        # Initialize document processor
+        processor = DocumentProcessor(
+            chunk_size=1000,
+            chunk_overlap=200,
+            chunking_strategy="sentence",
+            language="en"
+        )
+        
+        # Process the PDF file
+        await cl.Message(content=f"📄 Processing PDF: **{file.name}**...").send()
+        
+        # Extract text and create chunks
+        chunks = processor.process_document(file.path, extractor_type="pdfplumber")
+        
+        if not chunks:
+            return {
+                "success": False,
+                "message": "No text could be extracted from the PDF."
+            }
+        
+        await cl.Message(
+            content=f"✅ Extracted and chunked into **{len(chunks)}** chunks."
+        ).send()
+        
+        # Initialize embedders for BOTH semantic (dense) and lexical (sparse)
+        dense_embedder = PineconeEmbedder()
+        sparse_embedder = SparseEmbedder(
+            pc=dense_embedder.pc,  # Reuse the same Pinecone client
+            sparse_index_name=os.getenv("PINECONE_SPARSE_INDEX_NAME")
+        )
+        
+        # Generate DENSE embeddings (semantic)
+        await cl.Message(content="🔄 Generating dense embeddings (semantic)...").send()
+        dense_embeddings = dense_embedder.embed_chunks(chunks)
+        
+        # Generate SPARSE embeddings (lexical/keyword)
+        await cl.Message(content="🔄 Generating sparse embeddings (lexical)...").send()
+        sparse_embeddings = sparse_embedder.embed_chunks_sparse(chunks)
+        
+        # Use default namespace for all uploads
+        namespace = "default"
+        
+        # Store DENSE vectors in Pinecone dense index
+        await cl.Message(content="💾 Storing dense vectors (semantic index)...").send()
+        dense_embedder.store_chunks(chunks, dense_embeddings, namespace=namespace)
+        
+        # Store SPARSE vectors in Pinecone sparse index
+        await cl.Message(content="💾 Storing sparse vectors (lexical index)...").send()
+        sparse_embedder.store_sparse_chunks(chunks, sparse_embeddings, namespace=namespace)
+        
+        return {
+            "success": True,
+            "chunks_count": len(chunks),
+            "namespace": "default",
+            "filename": file.name,
+            "dense_stored": True,
+            "sparse_stored": True
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error processing PDF: {str(e)}"
+        }
+
+
 @cl.on_chat_start
 async def start():
     """Initialize the chat session with AI agent"""
+    
+    # First, ask with action buttons
+    action = await cl.AskActionMessage(
+        content="📚 **Welcome to the Data Analytics AI Agent!**\n\n"
+                "Would you like to upload any PDF documents for analysis?\n\n"
+                "PDFs will be automatically:\n"
+                "- 📄 Extracted and chunked\n"
+                "- 🧠 Embedded with AI (both semantic & lexical)\n"
+                "- 💾 Stored in dual vector indexes\n"
+                "- 🔍 Made searchable via hybrid RAG",
+        actions=[
+            cl.Action(name="upload", payload={"action": "upload"}, label="📤 Upload PDF Documents"),
+            cl.Action(name="skip", payload={"action": "skip"}, label="⏭️ Skip for Now"),
+        ],
+        timeout=60,
+    ).send()
+    
+    # If user chooses to upload, show the file dialog
+    if action and action.get("payload", {}).get("action") == "upload":
+        files = None
+        try:
+            files = await cl.AskFileMessage(
+                content="📁 **Select PDF files to upload**\n\n"
+                        "Drag and drop or browse for PDF files (max 20MB each, up to 5 files):",
+                accept=["application/pdf"],
+                max_size_mb=20,
+                max_files=5,
+                timeout=300,
+                raise_on_timeout=False
+            ).send()
+        except:
+            files = None
+        
+        # Process uploaded PDFs if any
+        if files:
+            for file in files:
+                result = await process_pdf_upload(file)
+                
+                if result["success"]:
+                    await cl.Message(
+                        content=f"✅ **Successfully processed:** {result['filename']}\n\n"
+                                f"- Chunks: {result['chunks_count']}\n"
+                                f"- Namespace: `{result['namespace']}`\n"
+                                f"- Dense vectors: {'✅ Stored' if result.get('dense_stored') else '❌ Failed'}\n"
+                                f"- Sparse vectors: {'✅ Stored' if result.get('sparse_stored') else '❌ Failed'}\n"
+                                f"- Status: Ready for hybrid search! 🚀\n\n"
+                                f"💡 All documents are stored in the default namespace for easy retrieval."
+                    ).send()
+                else:
+                    await cl.Message(
+                        content=f"❌ **Failed to process:** {file.name}\n\n"
+                                f"Error: {result.get('message', 'Unknown error')}"
+                    ).send()
+        else:
+            await cl.Message(
+                content="⏭️ No files uploaded. You can upload documents anytime using the 📎 attachment icon!"
+            ).send()
+    else:
+        # User skipped
+        await cl.Message(
+            content="⏭️ Skipped PDF upload. You can upload documents anytime using the 📎 attachment icon!"
+        ).send()
     
     # Set up chat settings
     settings = await cl.ChatSettings(
@@ -223,8 +371,11 @@ async def start():
                 "I can help you analyze data from:\n"
                 "- 📊 **PostgreSQL** - Staging data\n"
                 "- ❄️ **Snowflake** - Data warehouse\n"
-                "- 📚 **Documents** - Search project documentation\n\n"
-                "💡 **Tip:** Click the settings icon ⚙️ to customize the model, temperature, and streaming.\n\n"
+                "- 📚 **Documents** - Search project documentation\n"
+                "- 📄 **Your PDFs** - Search uploaded documents\n\n"
+                "💡 **Tips:**\n"
+                "- Click the settings icon ⚙️ to customize the model and temperature\n"
+                "- Use the 📎 attachment icon to upload more PDFs anytime\n\n"
                 "📜 Your conversations are automatically saved - access them from the sidebar!\n\n"
                 "Ask me anything about products, customers, sales, revenue trends, or search the documentation!"
     ).send()
@@ -386,6 +537,31 @@ Keep your responses focused on answering the user's question with meaningful ins
 @cl.on_message
 async def main(message: cl.Message):
     """Handle incoming user messages with optional Human-in-the-Loop for tool execution"""
+    
+    # Check if user uploaded files with their message
+    if message.elements:
+        for element in message.elements:
+            if isinstance(element, cl.File) and element.mime == "application/pdf":
+                # Process the uploaded PDF
+                result = await process_pdf_upload(element)
+                
+                if result["success"]:
+                    await cl.Message(
+                        content=f"✅ **Successfully processed:** {result['filename']}\n\n"
+                                f"- Chunks: {result['chunks_count']}\n"
+                                f"- Namespace: `{result['namespace']}`\n"
+                                f"- Dense vectors: {'✅ Stored' if result.get('dense_stored') else '❌ Failed'}\n"
+                                f"- Sparse vectors: {'✅ Stored' if result.get('sparse_stored') else '❌ Failed'}\n"
+                                f"- Status: Ready for hybrid search! 🚀\n\n"
+                                f"💡 All documents are stored in the default namespace.\n"
+                                f"You can now ask questions about this document!"
+                    ).send()
+                else:
+                    await cl.Message(
+                        content=f"❌ **Failed to process:** {element.name}\n\n"
+                                f"Error: {result.get('message', 'Unknown error')}"
+                    ).send()
+                    return
     
     agent = cl.user_session.get("agent")
     chat_history = cl.user_session.get("chat_history", [])
