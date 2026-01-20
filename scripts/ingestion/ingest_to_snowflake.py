@@ -263,8 +263,9 @@ def main():
     stage_prefix = STAGE_FQN.split(".")[0] if "." in STAGE_FQN else STAGE_FQN
 
     # Delete old files from stage before uploading new ones
-    logger.info("🧹 Cleaning up old CSV files from stage...")
-    delete_stage_files(STAGE_FQN, "*.csv")
+    logger.info("🧹 Cleaning up all files from stage...")
+    # remove all files from the stage
+    delete_stage_files(STAGE_FQN)
 
     # For each dataset configured in config['columns'], find the matching CSV and load it
     for dataset_name, cols in config.get("columns", {}).items():
@@ -273,7 +274,9 @@ def main():
         candidates = [
             p
             for p in os.listdir(local_data_dir)
-            if p.lower().startswith(dataset_name.lower()) and p.lower().endswith(".csv")
+            if p.lower().startswith(dataset_name.lower()) and (
+                p.lower().endswith(".csv") or p.lower().endswith(".csv.gz")
+            )
         ]
         if not candidates:
             logger.warning(
