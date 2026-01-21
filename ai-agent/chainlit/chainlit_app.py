@@ -256,68 +256,6 @@ async def process_pdf_upload(file: cl.File) -> Dict[str, Any]:
 async def start():
     """Initialize the chat session with AI agent"""
     
-    # First, ask with action buttons
-    action = await cl.AskActionMessage(
-        content="📚 **Welcome to the Data Analytics AI Agent!**\n\n"
-                "Would you like to upload any PDF documents for analysis?\n\n"
-                "PDFs will be automatically:\n"
-                "- 📄 Extracted and chunked\n"
-                "- 🧠 Embedded with AI (both semantic & lexical)\n"
-                "- 💾 Stored in dual vector indexes\n"
-                "- 🔍 Made searchable via hybrid RAG",
-        actions=[
-            cl.Action(name="upload", payload={"action": "upload"}, label="📤 Upload PDF Documents"),
-            cl.Action(name="skip", payload={"action": "skip"}, label="⏭️ Skip for Now"),
-        ],
-        timeout=60,
-    ).send()
-    
-    # If user chooses to upload, show the file dialog
-    if action and action.get("payload", {}).get("action") == "upload":
-        files = None
-        try:
-            files = await cl.AskFileMessage(
-                content="📁 **Select PDF files to upload**\n\n"
-                        "Drag and drop or browse for PDF files (max 20MB each, up to 5 files):",
-                accept=["application/pdf"],
-                max_size_mb=20,
-                max_files=5,
-                timeout=300,
-                raise_on_timeout=False
-            ).send()
-        except:
-            files = None
-        
-        # Process uploaded PDFs if any
-        if files:
-            for file in files:
-                result = await process_pdf_upload(file)
-                
-                if result["success"]:
-                    await cl.Message(
-                        content=f"✅ **Successfully processed:** {result['filename']}\n\n"
-                                f"- Chunks: {result['chunks_count']}\n"
-                                f"- Namespace: `{result['namespace']}`\n"
-                                f"- Dense vectors: {'✅ Stored' if result.get('dense_stored') else '❌ Failed'}\n"
-                                f"- Sparse vectors: {'✅ Stored' if result.get('sparse_stored') else '❌ Failed'}\n"
-                                f"- Status: Ready for hybrid search! 🚀\n\n"
-                                f"💡 All documents are stored in the default namespace for easy retrieval."
-                    ).send()
-                else:
-                    await cl.Message(
-                        content=f"❌ **Failed to process:** {file.name}\n\n"
-                                f"Error: {result.get('message', 'Unknown error')}"
-                    ).send()
-        else:
-            await cl.Message(
-                content="⏭️ No files uploaded. You can upload documents anytime using the 📎 attachment icon!"
-            ).send()
-    else:
-        # User skipped
-        await cl.Message(
-            content="⏭️ Skipped PDF upload. You can upload documents anytime using the 📎 attachment icon!"
-        ).send()
-    
     # Set up chat settings
     settings = await cl.ChatSettings(
         [
@@ -540,28 +478,63 @@ async def main(message: cl.Message):
     
     # Check if user uploaded files with their message
     if message.elements:
-        for element in message.elements:
-            if isinstance(element, cl.File) and element.mime == "application/pdf":
-                # Process the uploaded PDF
-                result = await process_pdf_upload(element)
-                
-                if result["success"]:
-                    await cl.Message(
-                        content=f"✅ **Successfully processed:** {result['filename']}\n\n"
-                                f"- Chunks: {result['chunks_count']}\n"
-                                f"- Namespace: `{result['namespace']}`\n"
-                                f"- Dense vectors: {'✅ Stored' if result.get('dense_stored') else '❌ Failed'}\n"
-                                f"- Sparse vectors: {'✅ Stored' if result.get('sparse_stored') else '❌ Failed'}\n"
-                                f"- Status: Ready for hybrid search! 🚀\n\n"
-                                f"💡 All documents are stored in the default namespace.\n"
-                                f"You can now ask questions about this document!"
-                    ).send()
-                else:
-                    await cl.Message(
-                        content=f"❌ **Failed to process:** {element.name}\n\n"
-                                f"Error: {result.get('message', 'Unknown error')}"
-                    ).send()
-                    return
+        pdf_files = [element for element in message.elements if isinstance(element, cl.File) and element.mime == "application/pdf"]
+        
+        if pdf_files:
+            # Show preview of uploaded PDFs
+            pdf_elements = [
+                cl.Pdf(
+                    name=pdf.name,
+                    display="inline",
+                    path=pdf.path
+                )
+                for pdf in pdf_files
+            ]
+            
+            file_list = "\n".join([f"- {pdf.name}" for pdf in pdf_files])
+            
+            await cl.Message(
+                content=f"📄 **Preview of {len(pdf_files)} attached PDF file(s):**\n\n{file_list}",
+                elements=pdf_elements
+            ).send()
+            
+            # Ask for confirmation before processing
+            confirm = await cl.AskActionMessage(
+                content="🔄 **Ready to process these PDFs?**\n\n"
+                        "They will be extracted, chunked, embedded, and stored for AI search.",
+                actions=[
+                    cl.Action(name="proceed", payload={"action": "proceed"}, label="✅ Process Now"),
+                    cl.Action(name="cancel", payload={"action": "cancel"}, label="❌ Cancel"),
+                ],
+                timeout=60,
+            ).send()
+            
+            # Process only if user confirms
+            if confirm and confirm.get("payload", {}).get("action") == "proceed":
+                for pdf in pdf_files:
+                    result = await process_pdf_upload(pdf)
+                    
+                    if result["success"]:
+                        await cl.Message(
+                            content=f"✅ **Successfully processed:** {result['filename']}\n\n"
+                                    f"- Chunks: {result['chunks_count']}\n"
+                                    f"- Namespace: `{result['namespace']}`\n"
+                                    f"- Dense vectors: {'✅ Stored' if result.get('dense_stored') else '❌ Failed'}\n"
+                                    f"- Sparse vectors: {'✅ Stored' if result.get('sparse_stored') else '❌ Failed'}\n"
+                                    f"- Status: Ready for hybrid search! 🚀\n\n"
+                                    f"💡 All documents are stored in the default namespace.\n"
+                                    f"You can now ask questions about this document!"
+                        ).send()
+                    else:
+                        await cl.Message(
+                            content=f"❌ **Failed to process:** {pdf.name}\n\n"
+                                    f"Error: {result.get('message', 'Unknown error')}"
+                        ).send()
+            else:
+                await cl.Message(
+                    content="❌ Processing cancelled. PDFs were not stored."
+                ).send()
+                return
     
     agent = cl.user_session.get("agent")
     chat_history = cl.user_session.get("chat_history", [])
