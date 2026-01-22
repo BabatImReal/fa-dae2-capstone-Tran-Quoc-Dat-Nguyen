@@ -10,7 +10,7 @@ with date_spine as (
 date_attributes as (
     select
         date_value,
-        -- Date components
+        -- Date components value
         year(date_value) as year,
         month(date_value) as month,
         day(date_value) as day,

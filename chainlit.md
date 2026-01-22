@@ -1,14 +1,27 @@
-# Welcome to Chainlit! 🚀🤖
+# Data Analytics AI Agent
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+Welcome! This Chainlit UI lets you chat with the Data Analytics AI Agent to explore your data warehouse and documents in natural language.
 
-## Useful Links 🔗
+## What you can do
+- Ask business questions and get SQL automatically generated and run on Snowflake marts (facts & dims)
+- Explore streaming/staging data in PostgreSQL
+- Search project docs with hybrid RAG (dense + sparse)
+- Upload PDFs and search their contents after inline preview
+- Keep HITL on to approve tool executions before they run
 
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/k73SQ3FyUh) to ask questions, share your projects, and connect with other developers! 💬
+## How to use
+1) Sign in (app enforces password auth)
+2) Ask a question (e.g., "Top 5 customers by spend in 2025")
+3) Review/approve tool calls when prompted
+4) View results with generated SQL and returned rows
+5) Upload PDFs anytime via the 📎 button; preview appears before processing
 
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
+## Tips
+- Use clear date ranges (e.g., "Q4 2025", "last 30 days")
+- For customer attributes, mart uses surrogate keys; agent handles joins for you
+- If you reject a tool call, adjust the question and retry
+- Sessions persist; resume from the sidebar
 
-## Welcome screen
-
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
+## Need help?
+- Docs: https://docs.chainlit.io
+- Community: https://discord.gg/k73SQ3FyUh
