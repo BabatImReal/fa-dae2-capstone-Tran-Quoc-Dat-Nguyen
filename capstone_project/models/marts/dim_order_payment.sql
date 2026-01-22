@@ -51,7 +51,6 @@ order_agg as (
         -- 1 if any installment > 1 in the order
         max(case when payment_installments > 1 then 1 else 0 end) as has_installments_flag,
         max(loaded_at) as loaded_at,
-        -- SCD Type 2 attributes (take from latest record per order)
         max(case when is_current then 1 else 0 end) as is_current,
         max(effective_from) as effective_from,
         max(effective_to) as effective_to
