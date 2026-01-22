@@ -10,7 +10,7 @@ with date_spine as (
 date_attributes as (
     select
         date_value,
-        -- Date components
+        -- Date components value
         year(date_value) as year,
         month(date_value) as month,
         day(date_value) as day,
@@ -24,7 +24,7 @@ date_attributes as (
             when month(date_value) in (7, 8, 9) then 'Q3'
             else 'Q4'
         end as fiscal_quarter,
-        -- Business logic
+        -- Business logic for date
         coalesce(dayofweekiso(date_value) in (6, 7), false) as is_weekend,
         coalesce(date_value = current_date(), false) as is_today
     from date_spine
