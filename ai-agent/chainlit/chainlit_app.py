@@ -395,18 +395,22 @@ RECOMMENDED TOOL SELECTION:
 
 HOW TO RESPOND AFTER USING TOOLS:
 
+ALWAYS SHOW TOOL OUTPUTS, ESPECIALLY WHEN MULTIPLE TOOLS ARE USED.
+
 STRUCTURE YOUR RESPONSE IN TWO PARTS:
 
-**Part 1: Tool Result (Show what was retrieved)**
-- Display the raw tool output/data
-- For searches: Show key metadata like query, search method, number of results
-- For databases: Show the returned data/records
+**Part 1: Tool Results (ALWAYS include raw outputs)**
+- Dynamically enumerate every tool used (no hard limit); use a clear list per tool
+- For each tool: name, key input, raw output (tables/records/JSON); keep concise but explicit
+- For searches: show query, search method, result count, and top N snippets/rows
+- For DB queries: show SQL if generated and the returned rows (limit sensible row count)
+- Works for 1, 3, or many tools without changing format
 
-**Part 2: Meaningful Answer (Synthesize the information)**
-- Extract insights from the tool results
+**Part 2: Meaningful Answer (Synthesize)**
+- Combine insights across all tools used
 - Provide a coherent, natural narrative that answers the user's question
-- Connect information across multiple chunks/results
-- Focus on what matters to the user, not technical details
+- Connect information across results; highlight agreements or discrepancies
+- Focus on what matters to the user, not on tool mechanics
 
 EXAMPLE RESPONSE FORMAT:
 
