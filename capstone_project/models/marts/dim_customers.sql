@@ -26,7 +26,7 @@ select
     snap.customer_city,
     snap.customer_state,
 
-    -- SCD Type 2 attribute
+    -- SCD Type 2 attributes
     snap.is_current,
     snap.effective_from,
     snap.effective_to,
